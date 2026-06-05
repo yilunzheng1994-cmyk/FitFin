@@ -1,0 +1,283 @@
+.dashboard {
+    padding: 32rpx;
+    padding-bottom: 140rpx;
+    min-height: 100vh;
+    background: #f5f5f5;
+  
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      margin-bottom: 48rpx;
+      padding: 0 16rpx;
+  
+      .title {
+        font-size: 40rpx;
+        font-weight: bold;
+        color: #333;
+      }
+  
+      .confidence {
+        font-size: 28rpx;
+        color: #999;
+      }
+    }
+  
+    .kpi-grid {
+      display: flex;
+      gap: 24rpx;
+      margin-bottom: 32rpx;
+  
+      .kpi-card {
+        flex: 1;
+        background: #fff;
+        border-radius: 24rpx;
+        padding: 32rpx 16rpx;
+        text-align: center;
+        box-shadow: 0 4rpx 12rpx rgba(0,0,0,0.05);
+  
+        .kpi-label {
+          font-size: 28rpx;
+          color: #666;
+          display: block;
+          margin-bottom: 16rpx;
+        }
+  
+        .kpi-value {
+          font-size: 44rpx;
+          font-weight: bold;
+          color: #1890ff;
+        }
+      }
+    }
+  
+    .chart-section {
+      background: #fff;
+      border-radius: 24rpx;
+      padding: 32rpx;
+      margin-bottom: 32rpx;
+      box-shadow: 0 4rpx 12rpx rgba(0,0,0,0.05);
+  
+      .section-title {
+        font-size: 32rpx;
+        font-weight: bold;
+        color: #333;
+        display: block;
+        margin-bottom: 24rpx;
+      }
+    }
+  
+    .bar-chart {
+      display: flex;
+      justify-content: space-around;
+      align-items: flex-end;
+      height: 400rpx;
+      margin: 32rpx 0;
+      padding-bottom: 16rpx;
+      border-bottom: 2rpx solid #e8e8e8;
+  
+      .bar-column {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        width: 60rpx;
+  
+        .bar-container {
+          display: flex;
+          justify-content: center;
+          align-items: flex-end;
+          gap: 8rpx;
+          height: 300rpx;
+          width: 100%;
+  
+          .bar-revenue {
+            width: 20rpx;
+            background: #1890ff;
+            border-radius: 10rpx 10rpx 0 0;
+            transition: height 0.3s ease;
+            min-height: 4rpx;
+          }
+  
+          .bar-profit {
+            width: 20rpx;
+            background: #52c41a;
+            border-radius: 10rpx 10rpx 0 0;
+            transition: height 0.3s ease;
+            min-height: 4rpx;
+          }
+        }
+  
+        .bar-label {
+          font-size: 24rpx;
+          color: #999;
+          margin-top: 16rpx;
+        }
+      }
+    }
+  
+    .chart-legend {
+      display: flex;
+      justify-content: center;
+      gap: 48rpx;
+      margin-top: 24rpx;
+  
+      .legend-item {
+        display: flex;
+        align-items: center;
+        gap: 8rpx;
+        font-size: 24rpx;
+        color: #666;
+  
+        .legend-color {
+          width: 24rpx;
+          height: 24rpx;
+          border-radius: 4rpx;
+  
+          &.revenue {
+            background: #1890ff;
+          }
+  
+          &.profit {
+            background: #52c41a;
+          }
+        }
+      }
+    }
+  
+    .menu-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 24rpx;
+      margin-bottom: 32rpx;
+      padding: 0 16rpx;
+  
+      .menu-item {
+        background: #fff;
+        border-radius: 24rpx;
+        padding: 32rpx 24rpx;
+        text-align: center;
+        font-size: 32rpx;
+        color: #333;
+        box-shadow: 0 4rpx 12rpx rgba(0,0,0,0.05);
+        transition: all 0.2s;
+        border: 2rpx solid transparent;
+  
+        &:active {
+          transform: scale(0.98);
+          background: #f9f9f9;
+        }
+  
+        &.active {
+          background: #e6f7ff;
+          border-color: #1890ff;
+          color: #1890ff;
+        }
+      }
+    }
+  
+    .report-section {
+      background: #fff;
+      border-radius: 24rpx;
+      padding: 32rpx;
+      margin-bottom: 32rpx;
+      box-shadow: 0 4rpx 12rpx rgba(0,0,0,0.05);
+  
+      .report-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 24rpx;
+        padding-bottom: 16rpx;
+        border-bottom: 2rpx solid #f0f0f0;
+  
+        .report-title {
+          font-size: 36rpx;
+          font-weight: bold;
+          color: #333;
+        }
+  
+        .report-date {
+          font-size: 24rpx;
+          color: #999;
+        }
+      }
+  
+      .report-content {
+        .report-sub {
+          font-size: 28rpx;
+          font-weight: 500;
+          color: #666;
+          margin: 16rpx 0 8rpx;
+          padding-left: 16rpx;
+          border-left: 6rpx solid #1890ff;
+        }
+  
+        .report-row {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          padding: 20rpx 0;
+          border-bottom: 2rpx solid #f5f5f5;
+  
+          &.indent {
+            padding-left: 32rpx;
+          }
+  
+          &.total {
+            margin-top: 16rpx;
+            padding-top: 24rpx;
+            border-top: 2rpx solid #e8e8e8;
+            border-bottom: none;
+  
+            .report-label, .report-value {
+              font-weight: bold;
+              font-size: 32rpx;
+            }
+          }
+  
+          &.profit {
+            .report-value {
+              color: #52c41a;
+              font-weight: bold;
+            }
+          }
+  
+          &.loss {
+            .report-value {
+              color: #ff4d4f;
+              font-weight: bold;
+            }
+          }
+  
+          .report-label {
+            font-size: 28rpx;
+            color: #666;
+          }
+  
+          .report-value {
+            font-size: 28rpx;
+            font-weight: 500;
+            color: #333;
+          }
+        }
+      }
+    }
+  
+    .progress-bar {
+      margin: 24rpx 0;
+  
+      .progress-track {
+        background: #f0f0f0;
+        border-radius: 20rpx;
+        height: 16rpx;
+        overflow: hidden;
+  
+        .progress-fill {
+          background: linear-gradient(90deg, #52c41a, #1890ff);
+          border-radius: 20rpx;
+          height: 100%;
+          transition: width 0.3s ease;
+        }
+      }
+    }
+  }

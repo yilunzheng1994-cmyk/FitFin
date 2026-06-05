@@ -1,17 +1,17 @@
-.refine {
+.settings {
     padding: 32rpx;
     min-height: 100vh;
     background: #f5f5f5;
   
     .desc {
       text-align: center;
-      padding: 48rpx;
+      padding: 32rpx;
       background: #e6f7ff;
       border-radius: 24rpx;
       margin-bottom: 48rpx;
   
       text {
-        font-size: 32rpx;
+        font-size: 28rpx;
         color: #1890ff;
       }
     }
@@ -49,4 +49,32 @@
       line-height: 88rpx;
       font-size: 32rpx;
     }
+  }
+  .form-divider {
+    margin: 32rpx 0 24rpx;
+    padding-top: 16rpx;
+    border-top: 2rpx solid #e8e8e8;
+    position: relative;
+  
+    .divider-text {
+      position: absolute;
+      top: -24rpx;
+      left: 0;
+      background: #f5f5f5;
+      padding-right: 24rpx;
+      font-size: 28rpx;
+      color: #999;
+    }
+  }
+  
+  .hint {
+    font-size: 24rpx;
+    color: #999;
+    margin-top: 8rpx;
+  }
+  .dashboard {
+    padding: 32rpx;
+    padding-bottom: 140rpx;  // 为自定义 TabBar 留出空间
+    min-height: 100vh;
+    background: #f5f5f5;
   }
