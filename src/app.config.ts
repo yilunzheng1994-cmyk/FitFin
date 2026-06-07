@@ -15,5 +15,4 @@ export default defineAppConfig({
     navigationBarTitleText: 'FitFin 健身财务助手',
     navigationBarTextStyle: 'black'
   }
-  // 不配置 tabBar，使用自定义组件
 })

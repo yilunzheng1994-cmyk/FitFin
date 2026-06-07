@@ -1,10 +1,41 @@
-.app {
-    height: 100vh;
-    display: flex;
-    flex-direction: column;
-  }
+// 全局主色变量
+page {
+  --primary-color: #0F766E;
+  --primary-gradient-start: #0F766E;
+  --primary-gradient-end: #14B8A6;
+  --primary-light: #CCFBF1;
+  --bg-gray: #F8FAFC;
+  --text-primary: #1E293B;
+  --text-secondary: #64748B;
+  background-color: var(--bg-gray);
+}
+
+// 统一按钮样式
+.btn-primary {
+  background: linear-gradient(135deg, var(--primary-gradient-start), var(--primary-gradient-end));
+  border: none;
+  color: white;
+  font-weight: 500;
+  border-radius: 48rpx;
+  padding: 24rpx 48rpx;
+  transition: all 0.2s;
   
-  .page {
-    flex: 1;
-    overflow-y: auto;
+  &:active {
+    opacity: 0.85;
+    transform: scale(0.98);
   }
+}
+
+.btn-secondary {
+  background: #fff;
+  border: 2rpx solid var(--primary-color);
+  color: var(--primary-color);
+  font-weight: 500;
+  border-radius: 48rpx;
+  padding: 22rpx 46rpx;
+  transition: all 0.2s;
+  
+  &:active {
+    background: var(--primary-light);
+  }
+}

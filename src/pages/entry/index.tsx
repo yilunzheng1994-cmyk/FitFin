@@ -5,6 +5,7 @@ import { quickSaveField, getLatestDate, getDailyEntries } from '../../services/s
 import { formatCurrency } from '../../utils/format'
 import emitter from '../../utils/eventBus'
 import CustomTabBar from '../../components/CustomTabBar'
+import { vibrate } from '../../utils/vibrate'
 import './index.scss'
 
 export default function Entry() {
@@ -98,6 +99,7 @@ export default function Entry() {
       return
     }
     quickSaveField(selectedDate, selectedField as any, Number(inputValue))
+    vibrate('light')
     Taro.showToast({ title: '保存成功', icon: 'success' })
     setShowModal(false)
     setSelectedGroup('')
@@ -192,7 +194,10 @@ export default function Entry() {
 
   return (
     <View className="entry">
-      <View className="quick-entry" onClick={openQuickEntry}>
+      <View className="quick-entry" onClick={() => {
+        vibrate('light')
+        openQuickEntry()
+      }}>
         <Text className="quick-icon">+</Text>
         <Text className="quick-text">快捷录入</Text>
       </View>
@@ -242,7 +247,21 @@ export default function Entry() {
             <View className="modal-field"><Text className="modal-label">日期</Text><Picker mode="date" value={selectedDate} start="2020-01-01" end="2030-12-31" onChange={(e) => setSelectedDate(e.detail.value)}><View className="modal-picker">{selectedDate || '请选择日期'}</View></Picker></View>
             <View className="modal-field"><Text className="modal-label">分类</Text><Picker mode="selector" range={groups.map(g => g.label)} onChange={(e) => { setSelectedGroup(groups[e.detail.value].key); setSelectedField('') }}><View className="modal-picker">{selectedGroup ? groups.find(g => g.key === selectedGroup)?.label : '请选择分类'}</View></Picker></View>
             {selectedGroup && <View className="modal-field"><Text className="modal-label">字段</Text><Picker mode="selector" range={currentGroupFields.map(f => `${f.label} (${f.unit})`)} onChange={(e) => setSelectedField(currentGroupFields[e.detail.value].key)}><View className="modal-picker">{selectedField ? currentGroupFields.find(f => f.key === selectedField)?.label : '请选择字段'}</View></Picker></View>}
-            {selectedField && <View className="modal-field"><Text className="modal-label">数值</Text><Input type="number" value={inputValue} onInput={(e) => setInputValue(e.detail.value)} placeholder="请输入数值" className="modal-input" /></View>}
+            {selectedField && (
+              <View className="modal-field">
+                <Text className="modal-label">数值</Text>
+                <Input
+                  type="number"
+                  value={inputValue}
+                  onInput={(e) => setInputValue(e.detail.value)}
+                  placeholder="请输入数值"
+                  className="modal-input"
+                  focus={true}
+                  adjustPosition={true}
+                  cursorSpacing={100}
+                />
+              </View>
+            )}
             <View className="modal-buttons"><View className="modal-btn cancel" onClick={() => setShowModal(false)}>取消</View><View className="modal-btn confirm" onClick={handleSave}>保存</View></View>
           </View>
         </View>
