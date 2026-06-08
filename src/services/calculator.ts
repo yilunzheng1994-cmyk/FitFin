@@ -1,60 +1,87 @@
 import { DailyEntry, BusinessSettings, getDailyEntries, getBusinessSettings, getLatestEntry } from './storage'
-import { formatCurrency } from '../utils/format'
+
+// 计算团课总课时
+const calculateClassHours = (entry: DailyEntry): number => {
+  if (entry.classHours) return entry.classHours
+  return entry.classCount || 0
+}
 
 // 计算单日收入
 export const calculateDailyRevenue = (entry: DailyEntry, settings?: BusinessSettings): number => {
   const bizSettings = settings || getBusinessSettings()
   
-  // 团课收入：团课节数 × 平均每节课人数 × 人均收入
   const classCount = entry.classCount || 0
   const avgClassSize = entry.avgClassSize || bizSettings.avgClassSize
   const avgRevenuePerMember = entry.avgRevenuePerMember || bizSettings.avgClassRevenuePerMember
   const classRevenue = classCount * avgClassSize * avgRevenuePerMember
   
-  // 私教收入
   let ptRevenue = entry.ptRevenue || 0
   if (ptRevenue === 0 && entry.ptHours) {
     const ptRate = entry.ptRate || bizSettings.defaultPtRate
     ptRevenue = entry.ptHours * ptRate
   }
   
-  // 其他收入
-  const otherRevenue = (entry.newRevenue || 0) + 
-                       (entry.retailRevenue || 0) + 
-                       (entry.otherRevenue || 0)
+  const otherRevenue = (entry.retailRevenue || 0) + (entry.otherRevenue || 0)
   
   return classRevenue + ptRevenue + otherRevenue
 }
 
 // 计算单日成本
 export const calculateDailyCosts = (entry: DailyEntry, settings: BusinessSettings): number => {
-  // 私教佣金
   let ptRevenue = entry.ptRevenue || 0
   if (ptRevenue === 0 && entry.ptHours) {
     const ptRate = entry.ptRate || settings.defaultPtRate
     ptRevenue = entry.ptHours * ptRate
   }
+  
   const ptCommission = ptRevenue * settings.ptCommissionRate
   
-  // 变动成本
-  const variableCosts = (entry.marketingSpend || 0) + (entry.variableStaffCost || 0)
+  const classHours = calculateClassHours(entry)
+  const classCoachCost = classHours * settings.classCoachRate
   
-  // 固定成本分摊（月成本 / 30）
-  const dailyFixedCost = (settings.monthlyRent + 
-                          settings.monthlyUtilities + 
-                          settings.monthlyFixedStaffCost + 
-                          settings.monthlyInsurance) / 30
+  const dailyRent = settings.monthlyRent / 30
+  const dailyUtilities = settings.monthlyUtilities / 30
+  const dailyFixedStaff = settings.fixedStaffCost / 30
+  const dailyInsurance = settings.monthlyInsurance / 30
+  const fixedCosts = dailyRent + dailyUtilities + dailyFixedStaff + dailyInsurance
   
-  // 折旧成本
   const monthlyDepreciation = settings.equipmentValue / settings.equipmentDepreciationMonths
   const dailyDepreciation = monthlyDepreciation / 30
   
-  return dailyFixedCost + dailyDepreciation + ptCommission + variableCosts
+  let dailyRenovationAmort = 0
+  if (settings.renovationCost && settings.renovationYears) {
+    const monthlyAmort = settings.renovationCost / (settings.renovationYears * 12)
+    dailyRenovationAmort = monthlyAmort / 30
+  }
+  
+  const variableMarketing = entry.marketingSpend || 0
+  
+  return fixedCosts + dailyDepreciation + dailyRenovationAmort + 
+         ptCommission + classCoachCost + variableMarketing
 }
 
 // 计算单日利润
 export const calculateDailyProfit = (entry: DailyEntry, settings: BusinessSettings): number => {
   return calculateDailyRevenue(entry, settings) - calculateDailyCosts(entry, settings)
+}
+
+// 计算单日现金变化
+export const calculateDailyCashChange = (entry: DailyEntry): { cashIn: number; cashOut: number; netChange: number } => {
+  const cashIn = (entry.newRevenue || 0) + 
+                 (entry.retailRevenue || 0) + 
+                 (entry.otherRevenue || 0) + 
+                 (entry.otherCashIn || 0)
+  
+  const cashOut = (entry.marketingSpend || 0) + 
+                  (entry.otherCashOut || 0)
+  
+  return { cashIn, cashOut, netChange: cashIn - cashOut }
+}
+
+// 计算期末现金
+export const calculateEndingCash = (entry: DailyEntry): number => {
+  const { cashIn, cashOut } = calculateDailyCashChange(entry)
+  return (entry.cashBalanceStart || 0) + cashIn - cashOut
 }
 
 // 获取最新日期的关键指标
@@ -68,11 +95,9 @@ export const getLatestMetrics = () => {
   const costs = calculateDailyCosts(latestEntry, settings)
   const profit = revenue - costs
   
-  // 计算置信度：基于已填字段数量
   const allFields = [
-    'cashBalanceStart', 'newMembers', 'newRevenue', 'ptHours', 
-    'ptRevenue', 'retailRevenue', 'marketingSpend', 'variableStaffCost',
-    'classCount', 'avgClassSize', 'avgRevenuePerMember'
+    'cashBalanceStart', 'classCount', 'avgClassSize', 'avgRevenuePerMember',
+    'ptHours', 'ptRate', 'retailRevenue', 'marketingSpend'
   ]
   
   let filledCount = 0
@@ -125,7 +150,7 @@ export const getCumulativeMetrics = () => {
   }
 }
 
-// 获取近7天趋势数据（用于图表）
+// 获取近7天趋势
 export const getWeeklyTrend = () => {
   const entries = getDailyEntries()
   const settings = getBusinessSettings()
@@ -136,7 +161,7 @@ export const getWeeklyTrend = () => {
     const revenue = calculateDailyRevenue(entry, settings)
     const profit = calculateDailyProfit(entry, settings)
     return {
-      date: date.slice(5), // 显示 MM-DD
+      date: date.slice(5),
       revenue,
       profit
     }
@@ -148,55 +173,63 @@ export const calculateBreakEven = () => {
   const settings = getBusinessSettings()
   const entries = getDailyEntries()
   
-  // 1. 计算月固定成本总额
   const monthlyFixedCosts = settings.monthlyRent + 
                             settings.monthlyUtilities + 
-                            settings.monthlyFixedStaffCost + 
-                            settings.monthlyInsurance +
-                            settings.monthlyMarketing
+                            settings.fixedStaffCost + 
+                            settings.monthlyInsurance
   
-  // 2. 计算日均固定成本
-  const dailyFixedCosts = monthlyFixedCosts / 30
+  let monthlyRenovationAmort = 0
+  if (settings.renovationCost && settings.renovationYears) {
+    monthlyRenovationAmort = settings.renovationCost / (settings.renovationYears * 12)
+  }
   
-  // 3. 计算平均毛利率（基于历史数据）
+  const monthlyDepreciation = settings.equipmentValue / settings.equipmentDepreciationMonths
+  
+  const totalMonthlyFixedCosts = monthlyFixedCosts + monthlyRenovationAmort + monthlyDepreciation
+  const dailyFixedCosts = totalMonthlyFixedCosts / 30
+  
   let totalRevenue = 0
   let totalVariableCosts = 0
   
   Object.values(entries).forEach(entry => {
-    // 总收入
     const classRevenue = (entry.classCount || 0) * (entry.avgClassSize || 8) * (entry.avgRevenuePerMember || 15)
-    const ptRevenue = entry.ptRevenue || (entry.ptHours || 0) * (entry.ptRate || 80)
-    const otherRevenue = (entry.newRevenue || 0) + (entry.retailRevenue || 0) + (entry.otherRevenue || 0)
+    let ptRevenue = entry.ptRevenue || 0
+    if (ptRevenue === 0 && entry.ptHours) {
+      ptRevenue = (entry.ptHours || 0) * (entry.ptRate || 80)
+    }
+    const otherRevenue = (entry.retailRevenue || 0) + (entry.otherRevenue || 0)
     const revenue = classRevenue + ptRevenue + otherRevenue
     
-    // 变动成本（私教佣金 + 变动人力 + 营销）
     const ptCommission = ptRevenue * settings.ptCommissionRate
-    const variableCosts = ptCommission + (entry.marketingSpend || 0) + (entry.variableStaffCost || 0)
+    const classHours = (entry.classHours || entry.classCount || 0)
+    const classCoachCost = classHours * settings.classCoachRate
+    const variableMarketing = entry.marketingSpend || 0
+    
+    const variableCosts = ptCommission + classCoachCost + variableMarketing
     
     totalRevenue += revenue
     totalVariableCosts += variableCosts
   })
   
-  // 毛利率 = (收入 - 变动成本) / 收入
   const grossMargin = totalRevenue > 0 ? (totalRevenue - totalVariableCosts) / totalRevenue : 0.5
-  
-  // 4. 盈亏平衡点 = 固定成本 ÷ 毛利率
   const dailyBreakEven = grossMargin > 0 ? dailyFixedCosts / grossMargin : dailyFixedCosts
-  const monthlyBreakEven = grossMargin > 0 ? monthlyFixedCosts / grossMargin : monthlyFixedCosts
+  const monthlyBreakEven = grossMargin > 0 ? totalMonthlyFixedCosts / grossMargin : totalMonthlyFixedCosts
   
-  // 5. 获取当前日均收入
   let currentDailyRevenue = 0
   const latestEntry = getLatestEntry()
   if (latestEntry) {
     const classRevenue = (latestEntry.classCount || 0) * (latestEntry.avgClassSize || 8) * (latestEntry.avgRevenuePerMember || 15)
-    const ptRevenue = latestEntry.ptRevenue || (latestEntry.ptHours || 0) * (latestEntry.ptRate || 80)
-    const otherRevenue = (latestEntry.newRevenue || 0) + (latestEntry.retailRevenue || 0) + (latestEntry.otherRevenue || 0)
+    let ptRevenue = latestEntry.ptRevenue || 0
+    if (ptRevenue === 0 && latestEntry.ptHours) {
+      ptRevenue = (latestEntry.ptHours || 0) * (latestEntry.ptRate || 80)
+    }
+    const otherRevenue = (latestEntry.retailRevenue || 0) + (latestEntry.otherRevenue || 0)
     currentDailyRevenue = classRevenue + ptRevenue + otherRevenue
   }
   
   return {
     dailyFixedCosts,
-    monthlyFixedCosts,
+    monthlyFixedCosts: totalMonthlyFixedCosts,
     grossMargin: grossMargin * 100,
     dailyBreakEven,
     monthlyBreakEven,

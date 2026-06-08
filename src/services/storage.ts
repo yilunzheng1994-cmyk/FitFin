@@ -4,8 +4,12 @@ export interface DailyEntry {
   date: string;
   // 现金类
   cashBalanceStart?: number;
+  // 其他现金
+  otherCashIn?: number;
+  otherCashOut?: number;
   // 团课类
   classCount?: number;
+  classHours?: number;           // 团课总课时（用于计算团课教练费）
   avgClassSize?: number;
   avgRevenuePerMember?: number;
   // 会员类
@@ -21,7 +25,7 @@ export interface DailyEntry {
   otherRevenue?: number;
   // 支出类
   marketingSpend?: number;
-  variableStaffCost?: number;
+  // 时间戳
   createdAt: number;
   updatedAt: number;
 }
@@ -29,10 +33,10 @@ export interface DailyEntry {
 export interface BusinessSettings {
   monthlyRent: number;
   monthlyUtilities: number;
-  monthlyFixedStaffCost: number;
+  fixedStaffCost: number;        // 固定人力成本（底薪）
   monthlyInsurance: number;
-  monthlyMarketing: number;
-  ptCommissionRate: number;
+  classCoachRate: number;        // 团课教练课时费（元/小时）
+  ptCommissionRate: number;      // 私教佣金比例（%）
   equipmentValue: number;
   equipmentDepreciationMonths: number;
   currency: string;
@@ -40,6 +44,8 @@ export interface BusinessSettings {
   avgClassSize: number;
   avgClassRevenuePerMember: number;
   openingUnearnedRevenue: number;
+  renovationCost: number;
+  renovationYears: number;
 }
 
 const STORAGE_KEYS = {
@@ -120,9 +126,9 @@ export const getRecentEntries = (days: number = 7): DailyEntry[] => {
 const DEFAULT_SETTINGS: BusinessSettings = {
   monthlyRent: 5000,
   monthlyUtilities: 800,
-  monthlyFixedStaffCost: 4000,
+  fixedStaffCost: 4000,
   monthlyInsurance: 200,
-  monthlyMarketing: 1000,
+  classCoachRate: 100,
   ptCommissionRate: 0.35,
   equipmentValue: 30000,
   equipmentDepreciationMonths: 60,
@@ -130,7 +136,9 @@ const DEFAULT_SETTINGS: BusinessSettings = {
   defaultPtRate: 80,
   avgClassSize: 8,
   avgClassRevenuePerMember: 15,
-  openingUnearnedRevenue: 0
+  openingUnearnedRevenue: 0,
+  renovationCost: 0,
+  renovationYears: 5
 }
 
 export const getBusinessSettings = (): BusinessSettings => {

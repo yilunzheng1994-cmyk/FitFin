@@ -1,7 +1,7 @@
 import { View, Text, Image } from '@tarojs/components'
 import { useState, useEffect } from 'react'
 import Taro from '@tarojs/taro'
-import { getLatestMetrics, getCumulativeMetrics, getWeeklyTrend, calculateBreakEven } from '../../services/calculator'
+import { getLatestMetrics, getCumulativeMetrics, getWeeklyTrend, calculateBreakEven, calculateEndingCash } from '../../services/calculator'
 import { getDailyEntries, getBusinessSettings } from '../../services/storage'
 import { formatCurrency } from '../../utils/format'
 import emitter from '../../utils/eventBus'
@@ -52,7 +52,7 @@ export default function Dashboard() {
   
   const [cashFlowData, setCashFlowData] = useState({
     cashIn: { newRevenue: 0, retailRevenue: 0, otherRevenue: 0, total: 0 },
-    cashOut: { marketing: 0, variableStaff: 0, total: 0 },
+    cashOut: { marketing: 0, variableStaff: 0, otherCashOut: 0, total: 0 },
     netChange: 0,
     beginningCash: 0,
     endingCash: 0
@@ -109,7 +109,7 @@ export default function Dashboard() {
     if (latestEntry) {
       const classRevenue = (latestEntry.classCount || 0) * (latestEntry.avgClassSize || 8) * (latestEntry.avgRevenuePerMember || 15)
       const ptRevenue = latestEntry.ptRevenue || (latestEntry.ptHours || 0) * (latestEntry.ptRate || 80)
-      const otherRevenue = (latestEntry.newRevenue || 0) + (latestEntry.retailRevenue || 0) + (latestEntry.otherRevenue || 0)
+      const otherRevenue = (latestEntry.retailRevenue || 0) + (latestEntry.otherRevenue || 0)
       const revenue = classRevenue + ptRevenue + otherRevenue
       
       const dailyFixedCost = (settings.monthlyRent + settings.monthlyUtilities + settings.monthlyFixedStaffCost + settings.monthlyInsurance) / 30
@@ -187,7 +187,8 @@ export default function Dashboard() {
       const cashOut = {
         marketing: latestEntry.marketingSpend || 0,
         variableStaff: latestEntry.variableStaffCost || 0,
-        total: (latestEntry.marketingSpend || 0) + (latestEntry.variableStaffCost || 0)
+        otherCashOut: latestEntry.otherCashOut || 0,
+        total: (latestEntry.marketingSpend || 0) + (latestEntry.variableStaffCost || 0) + (latestEntry.otherCashOut || 0)
       }
       
       setCashFlowData({
@@ -335,7 +336,7 @@ export default function Dashboard() {
                 <View className="report-sub"><Text>收入构成</Text></View>
                 <View className="report-row indent"><Text className="report-label">团课收入</Text><Text className="report-value">{formatCurrency(plData.classRevenue)}</Text></View>
                 <View className="report-row indent"><Text className="report-label">私教收入</Text><Text className="report-value">{formatCurrency(plData.ptRevenue)}</Text></View>
-                <View className="report-row indent"><Text className="report-label">其他收入</Text><Text className="report-value">{formatCurrency(plData.otherRevenue)}</Text></View>
+                <View className="report-row indent"><Text className="report-label">零售收入</Text><Text className="report-value">{formatCurrency(plData.otherRevenue)}</Text></View>
                 <View className="report-sub"><Text>成本与费用</Text></View>
                 <View className="report-row indent"><Text className="report-label">固定成本（日分摊）</Text><Text className="report-value">{formatCurrency(plData.fixedCosts)}</Text></View>
                 <View className="report-row indent"><Text className="report-label">变动人力成本</Text><Text className="report-value">{formatCurrency(plData.variableCosts)}</Text></View>
@@ -380,13 +381,14 @@ export default function Dashboard() {
               </View>
               <View className="report-content">
                 <View className="report-sub"><Text>现金流入</Text></View>
-                <View className="report-row indent"><Text className="report-label">新会员收入</Text><Text className="report-value">{formatCurrency(cashFlowData.cashIn.newRevenue)}</Text></View>
+                <View className="report-row indent"><Text className="report-label">新会员现金流入</Text><Text className="report-value">{formatCurrency(cashFlowData.cashIn.newRevenue)}</Text></View>
                 <View className="report-row indent"><Text className="report-label">零售收入</Text><Text className="report-value">{formatCurrency(cashFlowData.cashIn.retailRevenue)}</Text></View>
                 <View className="report-row indent"><Text className="report-label">其他收入</Text><Text className="report-value">{formatCurrency(cashFlowData.cashIn.otherRevenue)}</Text></View>
                 <View className="report-row total"><Text className="report-label">现金流入小计</Text><Text className="report-value">{formatCurrency(cashFlowData.cashIn.total)}</Text></View>
                 <View className="report-sub"><Text>现金流出</Text></View>
                 <View className="report-row indent"><Text className="report-label">营销支出</Text><Text className="report-value">{formatCurrency(cashFlowData.cashOut.marketing)}</Text></View>
                 <View className="report-row indent"><Text className="report-label">变动人力成本</Text><Text className="report-value">{formatCurrency(cashFlowData.cashOut.variableStaff)}</Text></View>
+                <View className="report-row indent"><Text className="report-label">其他现金流出</Text><Text className="report-value">{formatCurrency(cashFlowData.cashOut.otherCashOut)}</Text></View>
                 <View className="report-row total"><Text className="report-label">现金流出小计</Text><Text className="report-value">{formatCurrency(cashFlowData.cashOut.total)}</Text></View>
                 <View className="report-row profit"><Text className="report-label">净现金流</Text><Text className="report-value">{formatCurrency(cashFlowData.netChange)}</Text></View>
                 <View className="report-sub"><Text>现金余额</Text></View>

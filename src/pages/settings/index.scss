@@ -90,3 +90,16 @@
     }
   }
 }
+.notice {
+  margin: 32rpx 0 16rpx;
+  padding: 24rpx;
+  background: #FEF3C7;
+  border-radius: 16rpx;
+  text-align: center;
+
+  .notice-text {
+    font-size: 26rpx;
+    color: #92400E;
+    line-height: 1.4;
+  }
+}

@@ -1,7 +1,8 @@
 import { View, Text, Input, Picker } from '@tarojs/components'
 import { useState, useEffect } from 'react'
 import Taro from '@tarojs/taro'
-import { quickSaveField, getLatestDate, getDailyEntries } from '../../services/storage'
+import { quickSaveField, getLatestDate, getDailyEntries, getDailyEntryByDate } from '../../services/storage'
+import { calculateEndingCash } from '../../services/calculator'
 import { formatCurrency } from '../../utils/format'
 import emitter from '../../utils/eventBus'
 import CustomTabBar from '../../components/CustomTabBar'
@@ -14,35 +15,41 @@ export default function Entry() {
   const [selectedField, setSelectedField] = useState('')
   const [inputValue, setInputValue] = useState('')
   const [selectedDate, setSelectedDate] = useState('')
+  const [suggestedCashStart, setSuggestedCashStart] = useState<string>('')
+  const [cashStartWarning, setCashStartWarning] = useState<string>('')
   const [filterDate, setFilterDate] = useState('')
   const [filterField, setFilterField] = useState('')
   const [availableDates, setAvailableDates] = useState<string[]>([])
   const [records, setRecords] = useState<Array<{ date: string; field: string; value: number }>>([])
+  const [showCashHint, setShowCashHint] = useState(false)
 
   const groups = [
-    { key: 'cash', label: '💰 现金', fields: [{ key: 'cashBalanceStart', label: '期初现金', unit: '¥' }] },
+    { key: 'cashBalance', label: '💰 现金余额', fields: [
+      { key: 'cashBalanceStart', label: '期初现金', unit: '¥' }
+    ]},
+    { key: 'cashIn', label: '💵 现金流入', fields: [
+      { key: 'newRevenue', label: '新会员现金流入', unit: '¥', hint: '新办卡/续费收到的现金，不计入利润' },
+      { key: 'retailRevenue', label: '零售收入', unit: '¥', hint: '商品销售，现结' },
+      { key: 'otherRevenue', label: '其他收入', unit: '¥', hint: '其他所有现金收入' },
+      { key: 'otherCashIn', label: '其他现金流入', unit: '¥' }
+    ]},
+    { key: 'cashOut', label: '💸 现金流出', fields: [
+      { key: 'marketingSpend', label: '营销支出', unit: '¥' },
+      { key: 'otherCashOut', label: '其他现金流出', unit: '¥' }
+    ]},
     { key: 'class', label: '🏋️ 团课', fields: [
       { key: 'classCount', label: '团课节数', unit: '节' },
+      { key: 'classHours', label: '团课总课时', unit: '小时', hint: '用于计算团课教练课时费' },
       { key: 'avgClassSize', label: '平均每节课人数', unit: '人' },
       { key: 'avgRevenuePerMember', label: '单次课人均收入', unit: '¥' }
     ]},
-    { key: 'member', label: '👥 会员', fields: [
-      { key: 'newMembers', label: '新会员数', unit: '人' },
-      { key: 'newRevenue', label: '新会员收入', unit: '¥' },
-      { key: 'memberCount', label: '当日会员数', unit: '人' }
-    ]},
     { key: 'pt', label: '💪 私教', fields: [
       { key: 'ptHours', label: '私教课时', unit: '小时' },
-      { key: 'ptRate', label: '私教单价', unit: '¥/小时' },
-      { key: 'ptRevenue', label: '私教收入', unit: '¥' }
+      { key: 'ptRate', label: '私教单价', unit: '¥/小时' }
     ]},
-    { key: 'revenue', label: '💰 收入', fields: [
-      { key: 'retailRevenue', label: '零售收入', unit: '¥' },
-      { key: 'otherRevenue', label: '其他收入', unit: '¥' }
-    ]},
-    { key: 'expense', label: '💸 支出', fields: [
-      { key: 'marketingSpend', label: '营销支出', unit: '¥' },
-      { key: 'variableStaffCost', label: '变动人力成本', unit: '¥' }
+    { key: 'member', label: '👥 会员', fields: [
+      { key: 'newMembers', label: '新会员数', unit: '人' },
+      { key: 'memberCount', label: '当日会员数', unit: '人' }
     ]}
   ]
 
@@ -74,6 +81,31 @@ export default function Entry() {
     setRecords(recordList)
   }
 
+  // 计算建议的期初现金
+  const calculateSuggestedCashStart = (date: string): { suggested: string; warning: string } => {
+    const entries = getDailyEntries()
+    const dates = Object.keys(entries).sort()
+    const dateIndex = dates.indexOf(date)
+    
+    if (dateIndex > 0) {
+      const prevDate = dates[dateIndex - 1]
+      const prevEntry = entries[prevDate]
+      if (prevEntry) {
+        const prevEndingCash = calculateEndingCash(prevEntry)
+        const currentEntry = entries[date]
+        const currentStart = currentEntry?.cashBalanceStart
+        if (currentStart !== undefined && currentStart !== prevEndingCash) {
+          return {
+            suggested: prevEndingCash.toString(),
+            warning: `期初现金 ${formatCurrency(prevEndingCash)} 与昨日期末现金不符，建议修正`
+          }
+        }
+        return { suggested: prevEndingCash.toString(), warning: '' }
+      }
+    }
+    return { suggested: '', warning: '' }
+  }
+
   useEffect(() => {
     loadRecords()
   }, [filterDate, filterField])
@@ -86,7 +118,14 @@ export default function Entry() {
 
   const openQuickEntry = () => {
     const latestDate = getLatestDate()
-    setSelectedDate(latestDate || new Date().toISOString().split('T')[0])
+    const today = new Date().toISOString().split('T')[0]
+    const targetDate = latestDate || today
+    setSelectedDate(targetDate)
+    
+    const { suggested, warning } = calculateSuggestedCashStart(targetDate)
+    setSuggestedCashStart(suggested)
+    setCashStartWarning(warning)
+    
     setSelectedGroup('')
     setSelectedField('')
     setInputValue('')
@@ -156,6 +195,16 @@ export default function Entry() {
         }
       }
     })
+  }
+
+  const handleUseSuggestedCash = () => {
+    if (suggestedCashStart) {
+      quickSaveField(selectedDate, 'cashBalanceStart', Number(suggestedCashStart))
+      loadRecords()
+      emitter.emit('data-updated')
+      setShowModal(false)
+      Taro.showToast({ title: '期初现金已更新', icon: 'success' })
+    }
   }
 
   const handleSettings = () => Taro.navigateTo({ url: '/pages/settings/index' })
@@ -244,7 +293,50 @@ export default function Entry() {
         <View className="modal-mask" onClick={() => setShowModal(false)}>
           <View className="modal-container" onClick={(e) => e.stopPropagation()}>
             <Text className="modal-title">快捷录入</Text>
-            <View className="modal-field"><Text className="modal-label">日期</Text><Picker mode="date" value={selectedDate} start="2020-01-01" end="2030-12-31" onChange={(e) => setSelectedDate(e.detail.value)}><View className="modal-picker">{selectedDate || '请选择日期'}</View></Picker></View>
+            
+            {cashStartWarning && (
+              <View className="cash-warning">
+                <Text className="warning-text">⚠️ {cashStartWarning}</Text>
+                <View className="warning-btn" onClick={handleUseSuggestedCash}>
+                  一键修正
+                </View>
+              </View>
+            )}
+
+            <View className="modal-field">
+              <View className="field-header">
+                <Text className="modal-label">日期</Text>
+                {selectedField === 'cashBalanceStart' && (
+                  <View className="info-icon" onClick={() => setShowCashHint(!showCashHint)}>
+                    <Text className="info-mark">ⓘ</Text>
+                  </View>
+                )}
+              </View>
+              <Picker mode="date" value={selectedDate} start="2020-01-01" end="2030-12-31" onChange={(e) => setSelectedDate(e.detail.value)}>
+                <View className="modal-picker">{selectedDate || '请选择日期'}</View>
+              </Picker>
+            </View>
+
+            {showCashHint && selectedField === 'cashBalanceStart' && (
+              <View className="info-hint">
+                <Text className="hint-text">
+                  💡 期初现金通常自动等于前一天的期末现金。
+                  {'\n'}
+                  如果数据不一致，请检查前一天的数据是否有遗漏。
+                </Text>
+              </View>
+            )}
+
+            {suggestedCashStart && selectedField === 'cashBalanceStart' && (
+              <View className="suggested-cash">
+                <Text className="suggested-label">建议值：</Text>
+                <Text className="suggested-value">{formatCurrency(Number(suggestedCashStart))}</Text>
+                <View className="suggested-use" onClick={handleUseSuggestedCash}>
+                  使用
+                </View>
+              </View>
+            )}
+
             <View className="modal-field"><Text className="modal-label">分类</Text><Picker mode="selector" range={groups.map(g => g.label)} onChange={(e) => { setSelectedGroup(groups[e.detail.value].key); setSelectedField('') }}><View className="modal-picker">{selectedGroup ? groups.find(g => g.key === selectedGroup)?.label : '请选择分类'}</View></Picker></View>
             {selectedGroup && <View className="modal-field"><Text className="modal-label">字段</Text><Picker mode="selector" range={currentGroupFields.map(f => `${f.label} (${f.unit})`)} onChange={(e) => setSelectedField(currentGroupFields[e.detail.value].key)}><View className="modal-picker">{selectedField ? currentGroupFields.find(f => f.key === selectedField)?.label : '请选择字段'}</View></Picker></View>}
             {selectedField && (
@@ -260,6 +352,12 @@ export default function Entry() {
                   adjustPosition={true}
                   cursorSpacing={100}
                 />
+                {selectedField === 'classHours' && (
+                  <Text className="field-hint">💡 团课总课时，用于计算团课教练课时费</Text>
+                )}
+                {selectedField === 'newRevenue' && (
+                  <Text className="field-hint">💡 新办卡/续费收到的现金，不计入利润</Text>
+                )}
               </View>
             )}
             <View className="modal-buttons"><View className="modal-btn cancel" onClick={() => setShowModal(false)}>取消</View><View className="modal-btn confirm" onClick={handleSave}>保存</View></View>

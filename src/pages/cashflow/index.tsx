@@ -14,7 +14,7 @@ export default function CashFlow() {
   const [period, setPeriod] = useState<Period>('day')
   const [cashFlow, setCashFlow] = useState({
     cashIn: { newRevenue: 0, retailRevenue: 0, otherRevenue: 0, total: 0 },
-    cashOut: { marketing: 0, variableStaff: 0, total: 0 },
+    cashOut: { marketing: 0, variableStaff: 0, otherCashOut: 0, total: 0 },
     netChange: 0,
     beginningCash: 0,
     endingCash: 0
@@ -52,7 +52,7 @@ export default function CashFlow() {
     }
     
     let cashIn = { newRevenue: 0, retailRevenue: 0, otherRevenue: 0, total: 0 }
-    let cashOut = { marketing: 0, variableStaff: 0, total: 0 }
+    let cashOut = { marketing: 0, variableStaff: 0, otherCashOut: 0, total: 0 }
     let beginningCash = 0
     let endingCash = 0
     
@@ -66,7 +66,8 @@ export default function CashFlow() {
         
         cashOut.marketing += entry.marketingSpend || 0
         cashOut.variableStaff += entry.variableStaffCost || 0
-        cashOut.total += (entry.marketingSpend || 0) + (entry.variableStaffCost || 0)
+        cashOut.otherCashOut += entry.otherCashOut || 0
+        cashOut.total += (entry.marketingSpend || 0) + (entry.variableStaffCost || 0) + (entry.otherCashOut || 0)
       }
     })
     
@@ -138,7 +139,7 @@ export default function CashFlow() {
 
       <View className="section">
         <Text className="section-title">现金流入</Text>
-        <View className="row"><Text className="label">新会员收入</Text><Text className="value value-positive">{formatCurrency(cashFlow.cashIn.newRevenue)}</Text></View>
+        <View className="row"><Text className="label">新会员现金流入</Text><Text className="value value-positive">{formatCurrency(cashFlow.cashIn.newRevenue)}</Text></View>
         <View className="row"><Text className="label">零售收入</Text><Text className="value value-positive">{formatCurrency(cashFlow.cashIn.retailRevenue)}</Text></View>
         <View className="row"><Text className="label">其他收入</Text><Text className="value value-positive">{formatCurrency(cashFlow.cashIn.otherRevenue)}</Text></View>
         <View className="row total"><Text className="label">现金流入小计</Text><Text className="value value-positive">{formatCurrency(cashFlow.cashIn.total)}</Text></View>
@@ -148,6 +149,7 @@ export default function CashFlow() {
         <Text className="section-title">现金流出</Text>
         <View className="row"><Text className="label">营销支出</Text><Text className="value value-negative">{formatCurrency(cashFlow.cashOut.marketing)}</Text></View>
         <View className="row"><Text className="label">变动人力成本</Text><Text className="value value-negative">{formatCurrency(cashFlow.cashOut.variableStaff)}</Text></View>
+        <View className="row"><Text className="label">其他现金流出</Text><Text className="value value-negative">{formatCurrency(cashFlow.cashOut.otherCashOut)}</Text></View>
         <View className="row total"><Text className="label">现金流出小计</Text><Text className="value value-negative">{formatCurrency(cashFlow.cashOut.total)}</Text></View>
       </View>
 
