@@ -38,8 +38,8 @@ export default function Entry() {
       { key: 'otherCashOut', label: '其他现金流出', unit: '¥' }
     ]},
     { key: 'class', label: '🏋️ 团课', fields: [
-      { key: 'classCount', label: '团课节数', unit: '节' },
-      { key: 'classHours', label: '团课总课时', unit: '小时', hint: '用于计算团课教练课时费' },
+      { key: 'classCount', label: '团课节数', unit: '节', hint: '今天上了几节课？每节课时长可以不同。' },
+      { key: 'classHours', label: '团课总课时', unit: '小时', hint: '所有团课的时长总和。例如：5节课 × 1小时 = 5小时' },
       { key: 'avgClassSize', label: '平均每节课人数', unit: '人' },
       { key: 'avgRevenuePerMember', label: '单次课人均收入', unit: '¥' }
     ]},
@@ -352,8 +352,11 @@ export default function Entry() {
                   adjustPosition={true}
                   cursorSpacing={100}
                 />
+                {selectedField === 'classCount' && (
+                  <Text className="field-hint">💡 团课节数：今天上了几节课？每节课时长可以不同。</Text>
+                )}
                 {selectedField === 'classHours' && (
-                  <Text className="field-hint">💡 团课总课时，用于计算团课教练课时费</Text>
+                  <Text className="field-hint">💡 团课总课时：所有团课的时长总和。例如：5节课 × 1小时 = 5小时</Text>
                 )}
                 {selectedField === 'newRevenue' && (
                   <Text className="field-hint">💡 新办卡/续费收到的现金，不计入利润</Text>

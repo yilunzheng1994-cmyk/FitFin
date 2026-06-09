@@ -37,35 +37,68 @@
     }
   }
 
-  .kpi-grid {
-    display: flex;
-    gap: 24rpx;
-    margin-bottom: 32rpx;
+  // 竖式卡片样式
+  .kpi-card-vertical {
+    background: #fff;
+    border-radius: 32rpx;
+    padding: 32rpx 28rpx;
+    margin-bottom: 24rpx;
+    box-shadow: 0 8rpx 24rpx rgba(0, 0, 0, 0.04);
+    border: 1rpx solid rgba(15, 118, 110, 0.1);
 
-    .kpi-card {
-      flex: 1;
-      background: #fff;
-      border-radius: 32rpx;
-      padding: 32rpx 24rpx;
-      box-shadow: 0 8rpx 24rpx rgba(0, 0, 0, 0.04), 0 2rpx 4rpx rgba(0, 0, 0, 0.02);
-      border: 1rpx solid rgba(15, 118, 110, 0.1);
-      transition: all 0.2s;
+    .kpi-title {
+      font-size: 32rpx;
+      font-weight: bold;
+      color: #1E293B;
+      display: block;
+      margin-bottom: 24rpx;
+      padding-bottom: 16rpx;
+      border-bottom: 2rpx solid #f0f0f0;
+    }
+
+    .kpi-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 16rpx 0;
+
+      &.subtract {
+        .kpi-label {
+          color: #EF4444;
+        }
+      }
+
+      &.total {
+        margin-top: 8rpx;
+        padding-top: 16rpx;
+
+        .kpi-label, .kpi-value {
+          font-weight: bold;
+          font-size: 34rpx;
+        }
+      }
 
       .kpi-label {
         font-size: 28rpx;
         color: #64748B;
-        letter-spacing: 0.5rpx;
-        display: block;
-        margin-bottom: 16rpx;
       }
 
       .kpi-value {
-        font-size: 56rpx;
-        font-weight: 700;
-        color: #0F766E;
-        line-height: 1.2;
+        font-size: 32rpx;
+        font-weight: 500;
+        color: #1E293B;
       }
     }
+
+    .kpi-divider {
+      height: 2rpx;
+      background: #f0f0f0;
+      margin: 8rpx 0;
+    }
+  }
+
+  .text-green-600 {
+    color: #10B981 !important;
   }
 
   .chart-section {
@@ -118,7 +151,23 @@
 
         .bar-profit {
           width: 20rpx;
-          background: linear-gradient(180deg, #10B981, #34D399);
+          background: linear-gradient(180deg, #8B5CF6, #A78BFA);
+          border-radius: 10rpx 10rpx 0 0;
+          transition: height 0.3s ease;
+          min-height: 4rpx;
+        }
+
+        .bar-cash {
+          width: 20rpx;
+          background: linear-gradient(180deg, #0F766E, #14B8A6);
+          border-radius: 10rpx 10rpx 0 0;
+          transition: height 0.3s ease;
+          min-height: 4rpx;
+        }
+
+        .bar-available {
+          width: 20rpx;
+          background: linear-gradient(180deg, #8B5CF6, #A78BFA);
           border-radius: 10rpx 10rpx 0 0;
           transition: height 0.3s ease;
           min-height: 4rpx;
@@ -156,9 +205,27 @@
         }
 
         &.profit {
-          background: linear-gradient(135deg, #10B981, #34D399);
+          background: linear-gradient(135deg, #8B5CF6, #A78BFA);
+        }
+
+        &.cash {
+          background: linear-gradient(135deg, #0F766E, #14B8A6);
+        }
+
+        &.available {
+          background: linear-gradient(135deg, #8B5CF6, #A78BFA);
         }
       }
+    }
+  }
+
+  .chart-note {
+    margin-top: 16rpx;
+    text-align: center;
+    
+    text {
+      font-size: 22rpx;
+      color: #94A3B8;
     }
   }
 
@@ -222,7 +289,7 @@
 
     .report-content {
       .report-sub {
-        font-size: 28rpx;
+        font-size: 30rpx;
         font-weight: 600;
         color: #0F766E;
         margin: 24rpx 0 12rpx;
@@ -282,6 +349,106 @@
           color: #1E293B;
           text-align: right;
         }
+      }
+    }
+  }
+
+  .section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    cursor: pointer;
+    
+    .section-title {
+      font-size: 32rpx;
+      font-weight: bold;
+      color: #1E293B;
+    }
+    
+    .section-arrow {
+      font-size: 28rpx;
+      color: #94A3B8;
+    }
+  }
+
+  .cashflow-analysis-content {
+    margin-top: 24rpx;
+    padding-top: 16rpx;
+    border-top: 2rpx solid #f0f0f0;
+    
+    .analysis-card {
+      background: linear-gradient(135deg, #0F766E, #14B8A6);
+      border-radius: 24rpx;
+      padding: 32rpx;
+      margin-bottom: 24rpx;
+      text-align: center;
+      
+      .analysis-label {
+        font-size: 28rpx;
+        color: rgba(255,255,255,0.8);
+        display: block;
+        margin-bottom: 8rpx;
+      }
+      
+      .analysis-value {
+        font-size: 48rpx;
+        font-weight: bold;
+        color: #fff;
+        display: block;
+        margin-bottom: 8rpx;
+      }
+      
+      .analysis-status {
+        font-size: 24rpx;
+        color: rgba(255,255,255,0.6);
+      }
+    }
+    
+    .analysis-row {
+      display: flex;
+      justify-content: space-between;
+      padding: 16rpx 0;
+      
+      .analysis-label {
+        font-size: 28rpx;
+        color: #64748B;
+      }
+      
+      .analysis-value {
+        font-size: 28rpx;
+        font-weight: 500;
+        color: #1E293B;
+      }
+      
+      &.total {
+        margin-top: 8rpx;
+        padding-top: 16rpx;
+        border-top: 2rpx solid #e2e8f0;
+        
+        .analysis-label, .analysis-value {
+          font-weight: bold;
+          font-size: 32rpx;
+        }
+      }
+    }
+    
+    .analysis-divider {
+      height: 2rpx;
+      background: #f0f0f0;
+      margin: 8rpx 0;
+    }
+    
+    .analysis-note {
+      margin-top: 24rpx;
+      padding: 16rpx;
+      background: #F8FAFC;
+      border-radius: 16rpx;
+      
+      text {
+        font-size: 24rpx;
+        color: #94A3B8;
+        display: block;
+        text-align: center;
       }
     }
   }
@@ -349,5 +516,631 @@
         transform: scale(0.96);
       }
     }
+  }
+}
+// 盈亏平衡备注样式
+.break-even-note {
+  margin-top: 24px;
+  padding: 16px;
+  background-color: #f5f7fa;
+  border-radius: 12px;
+  
+  .note-title {
+    font-size: 24px;
+    font-weight: 500;
+    color: #666;
+    margin-bottom: 12px;
+    display: block;
+  }
+  
+  .note-item {
+    font-size: 22px;
+    color: #888;
+    line-height: 1.6;
+    margin-bottom: 8px;
+    
+    &:last-child {
+      margin-bottom: 0;
+    }
+  }
+}
+// 测试数据提示卡片
+.test-data-prompt {
+  margin: 20px;
+  padding: 32px 24px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border-radius: 24px;
+  text-align: center;
+  color: white;
+  
+  .prompt-icon {
+    font-size: 56px;
+    margin-bottom: 16px;
+  }
+  
+  .prompt-title {
+    font-size: 32px;
+    font-weight: 600;
+    display: block;
+    margin-bottom: 8px;
+  }
+  
+  .prompt-desc {
+    font-size: 24px;
+    opacity: 0.9;
+    display: block;
+    margin-bottom: 28px;
+  }
+  
+  .prompt-buttons {
+    display: flex;
+    justify-content: center;
+  }
+  
+  .prompt-btn {
+    padding: 16px 32px;
+    border-radius: 48px;
+    font-size: 28px;
+    font-weight: 500;
+    text-align: center;
+    
+    &.primary {
+      background: white;
+      color: #667eea;
+    }
+  }
+}
+
+// 清除数据按钮
+.clear-data-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px 20px;
+  margin: 10px 20px 0 20px;
+  background-color: #fff3f0;
+  border-radius: 16px;
+  border: 1px solid #ffccc7;
+  
+  .clear-icon {
+    font-size: 28px;
+    margin-right: 8px;
+  }
+  
+  .clear-text {
+    font-size: 26px;
+    color: #e67e22;
+  }
+}
+// 测试数据提示卡片
+.test-data-prompt {
+  margin: 20px;
+  padding: 32px 24px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border-radius: 24px;
+  text-align: center;
+  color: white;
+  
+  .prompt-icon {
+    font-size: 56px;
+    margin-bottom: 16px;
+  }
+  
+  .prompt-title {
+    font-size: 32px;
+    font-weight: 600;
+    display: block;
+    margin-bottom: 8px;
+  }
+  
+  .prompt-desc {
+    font-size: 24px;
+    opacity: 0.9;
+    display: block;
+    margin-bottom: 28px;
+  }
+  
+  .prompt-buttons {
+    display: flex;
+    justify-content: center;
+  }
+  
+  .prompt-btn {
+    padding: 16px 32px;
+    border-radius: 48px;
+    font-size: 28px;
+    font-weight: 500;
+    text-align: center;
+    
+    &.primary {
+      background: white;
+      color: #667eea;
+    }
+  }
+}
+
+// 清除数据按钮
+.clear-data-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px 20px;
+  margin: 10px 20px 0 20px;
+  background-color: #fff3f0;
+  border-radius: 16px;
+  border: 1px solid #ffccc7;
+  
+  .clear-icon {
+    font-size: 28px;
+    margin-right: 8px;
+  }
+  
+  .clear-text {
+    font-size: 26px;
+    color: #e67e22;
+  }
+}
+
+// 盈亏平衡备注样式
+.break-even-note {
+  margin-top: 24px;
+  padding: 16px;
+  background-color: #f5f7fa;
+  border-radius: 12px;
+  
+  .note-title {
+    font-size: 24px;
+    font-weight: 500;
+    color: #666;
+    margin-bottom: 12px;
+    display: block;
+  }
+  
+  .note-item {
+    font-size: 22px;
+    color: #888;
+    line-height: 1.6;
+    margin-bottom: 8px;
+    
+    &:last-child {
+      margin-bottom: 0;
+    }
+  }
+}
+
+// 进度条样式
+.progress-bar {
+  margin: 16px 0;
+  
+  .progress-track {
+    height: 8px;
+    background-color: #e5e7eb;
+    border-radius: 4px;
+    overflow: hidden;
+  }
+  
+  .progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #10b981, #34d399);
+    border-radius: 4px;
+    transition: width 0.3s ease;
+  }
+}
+// 客户价值分析卡片样式
+.customer-card {
+  display: flex;
+  align-items: center;
+  padding: 24px;
+  margin-bottom: 16px;
+  background-color: #fff;
+  border-radius: 20px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+  border: 1px solid #f0f0f0;
+  
+  &.highlight {
+    background: linear-gradient(135deg, #667eea08 0%, #764ba208 100%);
+    border: 1px solid #667eea30;
+  }
+  
+  .customer-icon {
+    font-size: 48px;
+    margin-right: 16px;
+  }
+  
+  .customer-info {
+    flex: 1;
+    
+    .customer-label {
+      font-size: 24px;
+      color: #999;
+      display: block;
+      margin-bottom: 8px;
+    }
+    
+    .customer-value {
+      font-size: 48px;
+      font-weight: 700;
+      color: #333;
+    }
+    
+    .customer-unit {
+      font-size: 24px;
+      color: #999;
+      margin-left: 4px;
+    }
+  }
+  
+  .customer-trend {
+    .trend-desc {
+      font-size: 22px;
+      color: #aaa;
+    }
+  }
+  
+  .customer-status {
+    padding: 8px 16px;
+    border-radius: 40px;
+    
+    .status-text {
+      font-size: 24px;
+      font-weight: 500;
+    }
+  }
+}
+
+// 指标解读区域
+.customer-interpretation {
+  margin-top: 24px;
+  padding: 20px;
+  background-color: #f0fdf4;
+  border-radius: 16px;
+  border-left: 4px solid #10b981;
+  
+  .interpretation-title {
+    font-size: 26px;
+    font-weight: 600;
+    color: #2d3748;
+    display: block;
+    margin-bottom: 16px;
+  }
+  
+  .interpretation-item {
+    margin-bottom: 12px;
+    
+    .interpretation-label {
+      font-size: 24px;
+      font-weight: 500;
+      color: #2d3748;
+      display: inline-block;
+      width: 120px;
+    }
+    
+    .interpretation-text {
+      font-size: 24px;
+      color: #4a5568;
+    }
+  }
+}
+
+// 计算说明
+.customer-note {
+  margin-top: 20px;
+  padding: 16px;
+  background-color: #f5f7fa;
+  border-radius: 12px;
+  
+  .note-title {
+    font-size: 24px;
+    font-weight: 500;
+    color: #666;
+    margin-bottom: 12px;
+    display: block;
+  }
+  
+  .note-item {
+    font-size: 22px;
+    color: #888;
+    line-height: 1.6;
+    margin-bottom: 8px;
+    
+    &:last-child {
+      margin-bottom: 0;
+    }
+  }
+}
+
+// 优化建议
+.customer-suggestion {
+  margin-top: 20px;
+  padding: 20px;
+  background-color: #fffbeb;
+  border-radius: 16px;
+  border-left: 4px solid #f59e0b;
+  
+  .suggestion-title {
+    font-size: 26px;
+    font-weight: 600;
+    color: #92400e;
+    display: block;
+    margin-bottom: 16px;
+  }
+  
+  .suggestion-item {
+    font-size: 24px;
+    color: #b45309;
+    line-height: 1.8;
+    margin-bottom: 8px;
+    
+    &:last-child {
+      margin-bottom: 0;
+    }
+  }
+}
+// 客户价值分析卡片样式
+.customer-card {
+  display: flex;
+  align-items: center;
+  padding: 24px;
+  margin-bottom: 16px;
+  background-color: #fff;
+  border-radius: 20px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+  border: 1px solid #f0f0f0;
+  
+  &.highlight {
+    background: linear-gradient(135deg, #667eea08 0%, #764ba208 100%);
+    border: 1px solid #667eea30;
+  }
+  
+  .customer-icon {
+    font-size: 48px;
+    margin-right: 16px;
+  }
+  
+  .customer-info {
+    flex: 1;
+    
+    .customer-label {
+      font-size: 24px;
+      color: #999;
+      display: block;
+      margin-bottom: 8px;
+    }
+    
+    .customer-value {
+      font-size: 48px;
+      font-weight: 700;
+      color: #333;
+    }
+    
+    .customer-unit {
+      font-size: 24px;
+      color: #999;
+      margin-left: 4px;
+    }
+  }
+  
+  .customer-trend {
+    .trend-desc {
+      font-size: 22px;
+      color: #aaa;
+    }
+  }
+  
+  .customer-status {
+    padding: 8px 16px;
+    border-radius: 40px;
+    
+    .status-text {
+      font-size: 24px;
+      font-weight: 500;
+    }
+  }
+}
+
+// 指标解读区域
+.customer-interpretation {
+  margin-top: 24px;
+  padding: 20px;
+  background-color: #f0fdf4;
+  border-radius: 16px;
+  border-left: 4px solid #10b981;
+  
+  .interpretation-title {
+    font-size: 26px;
+    font-weight: 600;
+    color: #166534;
+    display: block;
+    margin-bottom: 16px;
+  }
+  
+  .interpretation-item {
+    margin-bottom: 12px;
+    display: flex;
+    flex-wrap: wrap;
+    
+    .interpretation-label {
+      font-size: 24px;
+      font-weight: 500;
+      color: #166534;
+      width: 120px;
+      flex-shrink: 0;
+    }
+    
+    .interpretation-text {
+      font-size: 24px;
+      color: #14532d;
+      flex: 1;
+    }
+  }
+}
+
+// 计算说明
+.customer-note {
+  margin-top: 20px;
+  padding: 16px;
+  background-color: #f5f7fa;
+  border-radius: 12px;
+  
+  .note-title {
+    font-size: 24px;
+    font-weight: 500;
+    color: #666;
+    margin-bottom: 12px;
+    display: block;
+  }
+  
+  .note-item {
+    font-size: 22px;
+    color: #888;
+    line-height: 1.6;
+    margin-bottom: 8px;
+    
+    &:last-child {
+      margin-bottom: 0;
+    }
+  }
+}
+
+// 优化建议
+.customer-suggestion {
+  margin-top: 20px;
+  padding: 20px;
+  background-color: #fffbeb;
+  border-radius: 16px;
+  border-left: 4px solid #f59e0b;
+  
+  .suggestion-title {
+    font-size: 26px;
+    font-weight: 600;
+    color: #92400e;
+    display: block;
+    margin-bottom: 16px;
+  }
+  
+  .suggestion-item {
+    font-size: 24px;
+    color: #b45309;
+    line-height: 1.8;
+    margin-bottom: 8px;
+    
+    &:last-child {
+      margin-bottom: 0;
+    }
+  }
+}
+
+// 盈亏平衡备注样式
+.break-even-note {
+  margin-top: 24px;
+  padding: 16px;
+  background-color: #f5f7fa;
+  border-radius: 12px;
+  
+  .note-title {
+    font-size: 24px;
+    font-weight: 500;
+    color: #666;
+    margin-bottom: 12px;
+    display: block;
+  }
+  
+  .note-item {
+    font-size: 22px;
+    color: #888;
+    line-height: 1.6;
+    margin-bottom: 8px;
+    
+    &:last-child {
+      margin-bottom: 0;
+    }
+  }
+}
+
+// 进度条样式
+.progress-bar {
+  margin: 16px 0;
+  
+  .progress-track {
+    height: 8px;
+    background-color: #e5e7eb;
+    border-radius: 4px;
+    overflow: hidden;
+  }
+  
+  .progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #10b981, #34d399);
+    border-radius: 4px;
+    transition: width 0.3s ease;
+  }
+}
+
+// 测试数据提示卡片
+.test-data-prompt {
+  margin: 20px;
+  padding: 32px 24px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border-radius: 24px;
+  text-align: center;
+  color: white;
+  
+  .prompt-icon {
+    font-size: 56px;
+    margin-bottom: 16px;
+  }
+  
+  .prompt-title {
+    font-size: 32px;
+    font-weight: 600;
+    display: block;
+    margin-bottom: 8px;
+  }
+  
+  .prompt-desc {
+    font-size: 24px;
+    opacity: 0.9;
+    display: block;
+    margin-bottom: 28px;
+  }
+  
+  .prompt-buttons {
+    display: flex;
+    justify-content: center;
+  }
+  
+  .prompt-btn {
+    padding: 16px 32px;
+    border-radius: 48px;
+    font-size: 28px;
+    font-weight: 500;
+    text-align: center;
+    
+    &.primary {
+      background: white;
+      color: #667eea;
+    }
+  }
+}
+
+// 清除数据按钮
+.clear-data-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px 20px;
+  margin: 10px 20px 0 20px;
+  background-color: #fff3f0;
+  border-radius: 16px;
+  border: 1px solid #ffccc7;
+  
+  .clear-icon {
+    font-size: 28px;
+    margin-right: 8px;
+  }
+  
+  .clear-text {
+    font-size: 26px;
+    color: #e67e22;
   }
 }

@@ -15,9 +15,7 @@ export default function Settings() {
     equipmentValue: 30000,
     equipmentDepreciationMonths: 60,
     currency: '¥',
-    defaultPtRate: 80,
-    avgClassSize: 8,
-    avgClassRevenuePerMember: 15,
+    defaultPtRate: 300,
     openingUnearnedRevenue: 0,
     renovationCost: 0,
     renovationYears: 5
@@ -51,17 +49,16 @@ export default function Settings() {
         <View className="form-item"><Text className="label">团课教练课时费 (¥/小时)</Text><Input type="number" value={String(formData.classCoachRate)} onInput={(e) => setFormData({ ...formData, classCoachRate: Number(e.detail.value) })} className="input" /><Text className="hint">每节团课支付给教练的固定费用，随团课课时变动</Text></View>
         <View className="form-item"><Text className="label">私教佣金比例 (%)</Text><Input type="number" value={String(formData.ptCommissionRate * 100)} onInput={(e) => setFormData({ ...formData, ptCommissionRate: Number(e.detail.value) / 100 })} className="input" /><Text className="hint">私教收入分成比例，随私教收入变动</Text></View>
 
+        <View className="form-divider"><Text className="divider-text">收入设置</Text></View>
+        <View className="form-item"><Text className="label">默认私教单价 (¥/小时)</Text><Input type="number" value={String(formData.defaultPtRate)} onInput={(e) => setFormData({ ...formData, defaultPtRate: Number(e.detail.value) })} className="input" /><Text className="hint">未录入私教单价时使用此默认值</Text></View>
+
         <View className="form-divider"><Text className="divider-text">资产折旧与摊销</Text></View>
         <View className="form-item"><Text className="label">设备价值 (¥)</Text><Input type="number" value={String(formData.equipmentValue)} onInput={(e) => setFormData({ ...formData, equipmentValue: Number(e.detail.value) })} className="input" /></View>
         <View className="form-item"><Text className="label">折旧月数</Text><Input type="number" value={String(formData.equipmentDepreciationMonths)} onInput={(e) => setFormData({ ...formData, equipmentDepreciationMonths: Number(e.detail.value) })} className="input" /></View>
         <View className="form-item"><Text className="label">装修总投入 (¥)</Text><Input type="number" value={String(formData.renovationCost)} onInput={(e) => setFormData({ ...formData, renovationCost: Number(e.detail.value) })} className="input" /><Text className="hint">开业时的装修总花费</Text></View>
         <View className="form-item"><Text className="label">摊销年限 (年)</Text><Input type="number" value={String(formData.renovationYears)} onInput={(e) => setFormData({ ...formData, renovationYears: Number(e.detail.value) })} className="input" /><Text className="hint">通常 3-5 年</Text></View>
 
-        <View className="form-divider"><Text className="divider-text">团课收入估算</Text></View>
-        <View className="form-item"><Text className="label">平均每节课人数</Text><Input type="number" value={String(formData.avgClassSize)} onInput={(e) => setFormData({ ...formData, avgClassSize: Number(e.detail.value) })} className="input" /><Text className="hint">用于估算团课收入，可每日覆盖</Text></View>
-        <View className="form-item"><Text className="label">单次课人均收入 (¥)</Text><Input type="number" value={String(formData.avgClassRevenuePerMember)} onInput={(e) => setFormData({ ...formData, avgClassRevenuePerMember: Number(e.detail.value) })} className="input" /><Text className="hint">每节团课每位会员带来的平均收入</Text></View>
-
-        <View className="form-item"><Text className="label">默认私教单价 (¥/小时)</Text><Input type="number" value={String(formData.defaultPtRate)} onInput={(e) => setFormData({ ...formData, defaultPtRate: Number(e.detail.value) })} className="input" /><Text className="hint">未录入私教单价时使用此默认值</Text></View>
+        {/* 已删除「平均每节课人数」和「单次课人均收入」字段 */}
       </View>
       <View className="notice">
         <Text className="notice-text">⚠️ 修改以下配置后，会重新计算所有历史数据的成本和利润。</Text>

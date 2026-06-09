@@ -1,8 +1,8 @@
 import { View, Text, Image } from '@tarojs/components'
 import { useState, useEffect } from 'react'
 import Taro from '@tarojs/taro'
-import { getLatestMetrics, getCumulativeMetrics, getWeeklyTrend, calculateBreakEven, calculateEndingCash } from '../../services/calculator'
-import { getDailyEntries, getBusinessSettings } from '../../services/storage'
+import { getLatestMetrics, getCumulativeMetrics, getWeeklyTrend, calculateBreakEven, getCustomerHealthMetrics } from '../../services/calculator'
+import { getDailyEntries, getBusinessSettings, hasAnyData, initTestData, clearAllData } from '../../services/storage'
 import { formatCurrency } from '../../utils/format'
 import emitter from '../../utils/eventBus'
 import CustomTabBar from '../../components/CustomTabBar'
@@ -14,16 +14,21 @@ import './index.scss'
 export default function Dashboard() {
   const [metrics, setMetrics] = useState({
     revenue: 0,
+    costs: 0,
     profit: 0,
     confidence: 0,
     cashBalance: 0,
+    unearnedRevenue: 0,
+    availableCash: 0,
     newMembers: 0,
     totalRevenue: 0,
     totalProfit: 0,
     averageCAC: 0
   })
   const [chartData, setChartData] = useState<Array<{ date: string; revenue: number; profit: number }>>([])
+  const [cashTrendData, setCashTrendData] = useState<Array<{ date: string; cashBalance: number; availableCash: number }>>([])
   const [hasData, setHasData] = useState(false)
+  const [showTestDataPrompt, setShowTestDataPrompt] = useState(false)
   
   const [activeReport, setActiveReport] = useState('pl')
   
@@ -33,21 +38,21 @@ export default function Dashboard() {
     ptRevenue: 0,
     otherRevenue: 0,
     fixedCosts: 0,
+    fixedCostsDetail: {
+      rent: 0,
+      utilities: 0,
+      staff: 0,
+      insurance: 0,
+      depreciation: 0,
+      renovation: 0
+    },
     variableCosts: 0,
+    classCoachCost: 0,
     ptCommission: 0,
     marketingCost: 0,
     totalCosts: 0,
     profit: 0,
     profitMargin: 0
-  })
-  
-  const [balanceData, setBalanceData] = useState({
-    cash: 0,
-    unearnedRevenue: 0,
-    ownerEquity: 0,
-    totalAssets: 0,
-    totalLiabilities: 0,
-    isBalanced: true
   })
   
   const [cashFlowData, setCashFlowData] = useState({
@@ -65,6 +70,61 @@ export default function Dashboard() {
     isAchieved: false,
     dailyProgress: 0
   })
+  
+  const [customerMetrics, setCustomerMetrics] = useState({
+    cac: 0,
+    ltv: 0,
+    ratio: 0,
+    status: '',
+    statusColor: '',
+    statusDesc: '',
+    hasData: false
+  })
+
+  // 辅助函数：计算单日现金流入流出
+  const calculateCashFlowFromEntry = (entry: any) => {
+    const cashIn = (entry.newRevenue || 0) + 
+                   (entry.retailRevenue || 0) + 
+                   (entry.otherRevenue || 0) + 
+                   (entry.otherCashIn || 0)
+    const cashOut = (entry.marketingSpend || 0) + 
+                    (entry.otherCashOut || 0)
+    return { cashIn, cashOut }
+  }
+
+  const loadCashTrend = () => {
+    const entries = getDailyEntries()
+    const settings = getBusinessSettings()
+    const dates = Object.keys(entries).sort().slice(-7)
+    const openingUnearned = settings.openingUnearnedRevenue || 0
+    
+    let cumulativeNewRevenue = 0
+    let cumulativeConsumed = 0
+    const trendData: Array<{ date: string; cashBalance: number; availableCash: number }> = []
+    
+    for (const date of dates) {
+      const entry = entries[date]
+      if (!entry) continue
+      
+      const { cashIn, cashOut } = calculateCashFlowFromEntry(entry)
+      const endingCash = (entry.cashBalanceStart || 0) + cashIn - cashOut
+      
+      cumulativeNewRevenue += entry.newRevenue || 0
+      const classConsumed = (entry.classCount || 0) * (entry.avgClassSize || 8) * (entry.avgRevenuePerMember || 15)
+      const ptConsumed = (entry.ptHours || 0) * (entry.ptRate || 300)
+      cumulativeConsumed += classConsumed + ptConsumed
+      const unearnedRevenue = Math.max(0, openingUnearned + cumulativeNewRevenue - cumulativeConsumed)
+      const availableCash = endingCash - unearnedRevenue
+      
+      trendData.push({
+        date: date.slice(5),
+        cashBalance: endingCash,
+        availableCash: availableCash
+      })
+    }
+    
+    setCashTrendData(trendData)
+  }
 
   const loadData = () => {
     const latest = getLatestMetrics()
@@ -72,6 +132,7 @@ export default function Dashboard() {
       setMetrics(prev => ({
         ...prev,
         revenue: latest.revenue,
+        costs: latest.costs,
         profit: latest.profit,
         confidence: latest.confidence,
         cashBalance: latest.cashBalance,
@@ -91,12 +152,51 @@ export default function Dashboard() {
     setChartData(weeklyTrend)
     
     loadPLData()
-    loadBalanceData()
     loadCashFlowData()
     loadBreakEvenData()
+    loadCustomerMetrics()
+    loadCashTrend()
     
     const entries = getDailyEntries()
-    setHasData(Object.keys(entries).length > 0)
+    const settings = getBusinessSettings()
+    const dates = Object.keys(entries).sort()
+    const latestDate = dates[dates.length - 1]
+    
+    if (latestDate) {
+      const latestEntry = entries[latestDate]
+      const { cashIn, cashOut } = calculateCashFlowFromEntry(latestEntry)
+      const endingCash = (latestEntry.cashBalanceStart || 0) + cashIn - cashOut
+      
+      let totalNewRevenue = 0
+      let totalClassConsumed = 0
+      let totalPtConsumed = 0
+      
+      Object.entries(entries).forEach(([date, entry]) => {
+        if (date <= latestDate) {
+          totalNewRevenue += entry.newRevenue || 0
+          totalClassConsumed += (entry.classCount || 0) * (entry.avgClassSize || 8) * (entry.avgRevenuePerMember || 15)
+          totalPtConsumed += (entry.ptHours || 0) * (entry.ptRate || 300)
+        }
+      })
+      
+      const totalConsumed = totalClassConsumed + totalPtConsumed
+      const openingUnearned = settings.openingUnearnedRevenue || 0
+      const unearnedRevenue = Math.max(0, openingUnearned + totalNewRevenue - totalConsumed)
+      const availableCash = endingCash - unearnedRevenue
+      
+      setMetrics(prev => ({
+        ...prev,
+        unearnedRevenue,
+        availableCash
+      }))
+    }
+    
+    const entriesCount = Object.keys(entries).length
+    setHasData(entriesCount > 0)
+    
+    // 检查是否显示测试数据提示
+    const hasDataFlag = hasAnyData()
+    setShowTestDataPrompt(!hasDataFlag)
     
     Taro.stopPullDownRefresh()
   }
@@ -108,16 +208,33 @@ export default function Dashboard() {
     
     if (latestEntry) {
       const classRevenue = (latestEntry.classCount || 0) * (latestEntry.avgClassSize || 8) * (latestEntry.avgRevenuePerMember || 15)
-      const ptRevenue = latestEntry.ptRevenue || (latestEntry.ptHours || 0) * (latestEntry.ptRate || 80)
+      const ptRevenue = latestEntry.ptRevenue || (latestEntry.ptHours || 0) * (latestEntry.ptRate || 300)
       const otherRevenue = (latestEntry.retailRevenue || 0) + (latestEntry.otherRevenue || 0)
       const revenue = classRevenue + ptRevenue + otherRevenue
       
-      const dailyFixedCost = (settings.monthlyRent + settings.monthlyUtilities + settings.monthlyFixedStaffCost + settings.monthlyInsurance) / 30
+      // 日分摊固定成本明细
+      const dailyRent = settings.monthlyRent / 30
+      const dailyUtilities = settings.monthlyUtilities / 30
+      const dailyFixedStaff = settings.fixedStaffCost / 30
+      const dailyInsurance = settings.monthlyInsurance / 30
+      
       const monthlyDepreciation = settings.equipmentValue / settings.equipmentDepreciationMonths
       const dailyDepreciation = monthlyDepreciation / 30
+      
+      let dailyRenovationAmort = 0
+      if (settings.renovationCost && settings.renovationYears) {
+        const monthlyAmort = settings.renovationCost / (settings.renovationYears * 12)
+        dailyRenovationAmort = monthlyAmort / 30
+      }
+      
       const ptCommission = ptRevenue * settings.ptCommissionRate
-      const variableCosts = (latestEntry.marketingSpend || 0) + (latestEntry.variableStaffCost || 0)
-      const totalCosts = dailyFixedCost + dailyDepreciation + ptCommission + variableCosts
+      const classHours = latestEntry.classHours || latestEntry.classCount || 0
+      const classCoachCost = classHours * settings.classCoachRate
+      const marketingCost = latestEntry.marketingSpend || 0
+      
+      const fixedCostsTotal = dailyRent + dailyUtilities + dailyFixedStaff + dailyInsurance + dailyDepreciation + dailyRenovationAmort
+      const variableCostsTotal = classCoachCost + ptCommission
+      const totalCosts = fixedCostsTotal + variableCostsTotal + marketingCost
       const profit = revenue - totalCosts
       
       setPlData({
@@ -125,50 +242,22 @@ export default function Dashboard() {
         classRevenue,
         ptRevenue,
         otherRevenue,
-        fixedCosts: dailyFixedCost + dailyDepreciation,
-        variableCosts,
+        fixedCosts: fixedCostsTotal,
+        fixedCostsDetail: {
+          rent: dailyRent,
+          utilities: dailyUtilities,
+          staff: dailyFixedStaff,
+          insurance: dailyInsurance,
+          depreciation: dailyDepreciation,
+          renovation: dailyRenovationAmort
+        },
+        variableCosts: variableCostsTotal,
+        classCoachCost,
         ptCommission,
-        marketingCost: latestEntry.marketingSpend || 0,
+        marketingCost,
         totalCosts,
         profit,
         profitMargin: revenue > 0 ? (profit / revenue) * 100 : 0
-      })
-    }
-  }
-  
-  const loadBalanceData = () => {
-    const entries = getDailyEntries()
-    const settings = getBusinessSettings()
-    const latestDate = Object.keys(entries).sort().reverse()[0]
-    
-    if (latestDate) {
-      const latestEntry = entries[latestDate]
-      const cash = latestEntry?.cashBalanceStart || 0
-      
-      let totalNewRevenue = 0
-      let totalClassConsumed = 0
-      let totalPtConsumed = 0
-      
-      Object.entries(entries).forEach(([date, entry]) => {
-        if (date <= latestDate) {
-          totalNewRevenue += entry.newRevenue || 0
-          totalClassConsumed += (entry.classCount || 0) * (entry.avgClassSize || 8) * (entry.avgRevenuePerMember || 15)
-          totalPtConsumed += (entry.ptHours || 0) * (entry.ptRate || 80)
-        }
-      })
-      
-      const totalConsumed = totalClassConsumed + totalPtConsumed
-      const openingUnearned = settings.openingUnearnedRevenue || 0
-      const unearnedRevenue = Math.max(0, openingUnearned + totalNewRevenue - totalConsumed)
-      const ownerEquity = cash - unearnedRevenue
-      
-      setBalanceData({
-        cash,
-        unearnedRevenue,
-        ownerEquity,
-        totalAssets: cash,
-        totalLiabilities: unearnedRevenue,
-        isBalanced: Math.abs(cash - (unearnedRevenue + ownerEquity)) < 0.01
       })
     }
   }
@@ -186,17 +275,19 @@ export default function Dashboard() {
       }
       const cashOut = {
         marketing: latestEntry.marketingSpend || 0,
-        variableStaff: latestEntry.variableStaffCost || 0,
+        variableStaff: 0,
         otherCashOut: latestEntry.otherCashOut || 0,
-        total: (latestEntry.marketingSpend || 0) + (latestEntry.variableStaffCost || 0) + (latestEntry.otherCashOut || 0)
+        total: (latestEntry.marketingSpend || 0) + (latestEntry.otherCashOut || 0)
       }
+      
+      const endingCash = (latestEntry.cashBalanceStart || 0) + cashIn.total - cashOut.total
       
       setCashFlowData({
         cashIn,
         cashOut,
         netChange: cashIn.total - cashOut.total,
         beginningCash: latestEntry.cashBalanceStart || 0,
-        endingCash: (latestEntry.cashBalanceStart || 0) + cashIn.total - cashOut.total
+        endingCash
       })
     }
   }
@@ -213,6 +304,41 @@ export default function Dashboard() {
       dailyProgress
     })
   }
+  
+  const loadCustomerMetrics = () => {
+    const metrics = getCustomerHealthMetrics()
+    setCustomerMetrics(metrics)
+  }
+
+  // 加载测试数据
+  const handleLoadTestData = () => {
+    initTestData()
+    setShowTestDataPrompt(false)
+    loadData()
+    Taro.showToast({
+      title: '已加载示例数据',
+      icon: 'success'
+    })
+  }
+
+  // 清除所有数据
+  const handleClearAllData = () => {
+    Taro.showModal({
+      title: '确认清除',
+      content: '清除后所有数据将丢失，确定要清除吗？',
+      confirmColor: '#e67e22',
+      success: (res) => {
+        if (res.confirm) {
+          clearAllData()
+          loadData()
+          Taro.showToast({
+            title: '已清除所有数据',
+            icon: 'success'
+          })
+        }
+      }
+    })
+  }
 
   useEffect(() => {
     emitter.on('data-updated', () => {
@@ -227,8 +353,17 @@ export default function Dashboard() {
     loadData()
   })
 
-  const maxRevenue = Math.max(...chartData.map(d => d.revenue), 1)
-  const maxProfit = Math.max(...chartData.map(d => d.profit), 1)
+  const maxAllRevenueProfit = Math.max(
+    ...chartData.map(d => d.revenue),
+    ...chartData.map(d => d.profit),
+    1
+  )
+  
+  const maxAllCash = Math.max(
+    ...cashTrendData.map(d => d.cashBalance),
+    ...cashTrendData.map(d => d.availableCash),
+    1
+  )
 
   return (
     <View className="dashboard">
@@ -240,50 +375,78 @@ export default function Dashboard() {
         <Text className="confidence">置信度 {metrics.confidence}%</Text>
       </View>
 
-      {/* KPI 卡片始终显示 */}
-      <View className="kpi-grid">
-        <View className="kpi-card">
-          <Text className="kpi-label">今日收入</Text>
-          <Text className="kpi-value">
-            <CountUpNumber end={metrics.revenue} prefix="¥" decimals={2} />
-          </Text>
+      {/* 测试数据提示卡片（仅新用户或无数据时显示） */}
+      {showTestDataPrompt && (
+        <View className="test-data-prompt">
+          <View className="prompt-icon">📊</View>
+          <Text className="prompt-title">欢迎使用 FitFin</Text>
+          <Text className="prompt-desc">暂无数据，可加载示例数据快速体验</Text>
+          <View className="prompt-buttons">
+            <View className="prompt-btn primary" onClick={handleLoadTestData}>
+              加载示例数据
+            </View>
+          </View>
         </View>
-        <View className="kpi-card">
-          <Text className="kpi-label">今日利润</Text>
-          <Text className="kpi-value">
-            <CountUpNumber end={metrics.profit} prefix="¥" decimals={2} />
-          </Text>
-        </View>
-      </View>
+      )}
 
-      <View className="kpi-grid">
-        <View className="kpi-card">
-          <Text className="kpi-label">累计收入</Text>
-          <Text className="kpi-value">
-            <CountUpNumber end={metrics.totalRevenue} prefix="¥" decimals={2} />
-          </Text>
-        </View>
-        <View className="kpi-card">
-          <Text className="kpi-label">累计利润</Text>
-          <Text className="kpi-value">
-            <CountUpNumber end={metrics.totalProfit} prefix="¥" decimals={2} />
-          </Text>
-        </View>
-      </View>
-
-      {/* 根据是否有数据显示不同内容 */}
       {hasData ? (
         <>
-          {/* 有数据时显示图表 */}
+          {/* 有数据时显示清除按钮 */}
+          <View className="clear-data-btn" onClick={handleClearAllData}>
+            <Text className="clear-icon">🗑️</Text>
+            <Text className="clear-text">清除所有数据</Text>
+          </View>
+
+          {/* 第一行：利润计算卡 */}
+          <View className="kpi-card-vertical">
+            <Text className="kpi-title">今日经营成果</Text>
+            <View className="kpi-row">
+              <Text className="kpi-label">今日收入</Text>
+              <Text className="kpi-value"><CountUpNumber end={metrics.revenue} prefix="¥" decimals={0} /></Text>
+            </View>
+            <View className="kpi-row subtract">
+              <Text className="kpi-label">减：今日支出</Text>
+              <Text className="kpi-value"><CountUpNumber end={metrics.costs} prefix="¥" decimals={0} /></Text>
+            </View>
+            <View className="kpi-divider" />
+            <View className="kpi-row total">
+              <Text className="kpi-label">等于：今日利润</Text>
+              <Text className="kpi-value text-green-600">
+                <CountUpNumber end={metrics.profit} prefix="¥" decimals={0} />
+              </Text>
+            </View>
+          </View>
+
+          {/* 第二行：资金状况卡 */}
+          <View className="kpi-card-vertical">
+            <Text className="kpi-title">今日资金状况</Text>
+            <View className="kpi-row">
+              <Text className="kpi-label">今日现金余额</Text>
+              <Text className="kpi-value"><CountUpNumber end={metrics.cashBalance} prefix="¥" decimals={0} /></Text>
+            </View>
+            <View className="kpi-row subtract">
+              <Text className="kpi-label">减：预收会员款</Text>
+              <Text className="kpi-value"><CountUpNumber end={metrics.unearnedRevenue} prefix="¥" decimals={0} /></Text>
+            </View>
+            <View className="kpi-divider" />
+            <View className="kpi-row total">
+              <Text className="kpi-label">等于：可用现金余额</Text>
+              <Text className="kpi-value text-green-600">
+                <CountUpNumber end={metrics.availableCash} prefix="¥" decimals={0} />
+              </Text>
+            </View>
+          </View>
+
+          {/* 图表1：收入与利润趋势 */}
           {chartData.length > 0 && (
             <View className="chart-section">
-              <Text className="section-title">近7天趋势</Text>
+              <Text className="section-title">近7天收入与利润趋势</Text>
               <View className="bar-chart">
                 {chartData.map((item, idx) => (
                   <View key={idx} className="bar-column">
                     <View className="bar-container">
-                      <View className="bar-revenue" style={{ height: `${(item.revenue / maxRevenue) * 100}%` }} />
-                      <View className="bar-profit" style={{ height: `${(item.profit / maxProfit) * 100}%` }} />
+                      <View className="bar-revenue" style={{ height: `${(item.revenue / maxAllRevenueProfit) * 100}%` }} />
+                      <View className="bar-profit" style={{ height: `${(item.profit / maxAllRevenueProfit) * 100}%` }} />
                     </View>
                     <Text className="bar-label">{item.date}</Text>
                   </View>
@@ -296,7 +459,32 @@ export default function Dashboard() {
             </View>
           )}
 
-          {/* 报表菜单 */}
+          {/* 图表2：现金与可用现金趋势 */}
+          {cashTrendData.length > 0 && (
+            <View className="chart-section">
+              <Text className="section-title">近7天现金趋势</Text>
+              <View className="bar-chart">
+                {cashTrendData.map((item, idx) => (
+                  <View key={idx} className="bar-column">
+                    <View className="bar-container">
+                      <View className="bar-cash" style={{ height: `${(item.cashBalance / maxAllCash) * 100}%` }} />
+                      <View className="bar-available" style={{ height: `${(item.availableCash / maxAllCash) * 100}%` }} />
+                    </View>
+                    <Text className="bar-label">{item.date}</Text>
+                  </View>
+                ))}
+              </View>
+              <View className="chart-legend">
+                <View className="legend-item"><View className="legend-color cash" />现金余额</View>
+                <View className="legend-item"><View className="legend-color available" />可用现金</View>
+              </View>
+              <View className="chart-note">
+                <Text>💡 可用现金 = 现金余额 - 预收账款</Text>
+              </View>
+            </View>
+          )}
+
+          {/* 报表菜单 - 新顺序 */}
           <View className="menu-grid">
             <View className={`menu-item ${activeReport === 'pl' ? 'active' : ''}`} onClick={() => {
               vibrate('light')
@@ -304,11 +492,11 @@ export default function Dashboard() {
             }}>
               <Text>📊 利润表</Text>
             </View>
-            <View className={`menu-item ${activeReport === 'balance' ? 'active' : ''}`} onClick={() => {
+            <View className={`menu-item ${activeReport === 'breakeven' ? 'active' : ''}`} onClick={() => {
               vibrate('light')
-              setActiveReport('balance')
+              setActiveReport('breakeven')
             }}>
-              <Text>📋 资产负债表</Text>
+              <Text>⚖️ 盈亏平衡分析</Text>
             </View>
             <View className={`menu-item ${activeReport === 'cashflow' ? 'active' : ''}`} onClick={() => {
               vibrate('light')
@@ -316,15 +504,21 @@ export default function Dashboard() {
             }}>
               <Text>💰 现金流量表</Text>
             </View>
-            <View className={`menu-item ${activeReport === 'breakeven' ? 'active' : ''}`} onClick={() => {
+            <View className={`menu-item ${activeReport === 'cashflowAnalysis' ? 'active' : ''}`} onClick={() => {
               vibrate('light')
-              setActiveReport('breakeven')
+              setActiveReport('cashflowAnalysis')
             }}>
-              <Text>⚖️ 盈亏平衡分析</Text>
+              <Text>🏦 预收与可用现金余额</Text>
+            </View>
+            <View className={`menu-item ${activeReport === 'customer' ? 'active' : ''}`} onClick={() => {
+              vibrate('light')
+              setActiveReport('customer')
+            }}>
+              <Text>👥 客户价值分析</Text>
             </View>
           </View>
 
-          {/* 报表内容 */}
+          {/* 利润表内容 */}
           {activeReport === 'pl' && (
             <View className="report-section">
               <View className="report-header">
@@ -332,72 +526,35 @@ export default function Dashboard() {
                 <Text className="report-date">{new Date().toLocaleDateString()}</Text>
               </View>
               <View className="report-content">
-                <View className="report-row"><Text className="report-label">总收入</Text><Text className="report-value">{formatCurrency(plData.revenue)}</Text></View>
-                <View className="report-sub"><Text>收入构成</Text></View>
-                <View className="report-row indent"><Text className="report-label">团课收入</Text><Text className="report-value">{formatCurrency(plData.classRevenue)}</Text></View>
-                <View className="report-row indent"><Text className="report-label">私教收入</Text><Text className="report-value">{formatCurrency(plData.ptRevenue)}</Text></View>
-                <View className="report-row indent"><Text className="report-label">零售收入</Text><Text className="report-value">{formatCurrency(plData.otherRevenue)}</Text></View>
-                <View className="report-sub"><Text>成本与费用</Text></View>
-                <View className="report-row indent"><Text className="report-label">固定成本（日分摊）</Text><Text className="report-value">{formatCurrency(plData.fixedCosts)}</Text></View>
-                <View className="report-row indent"><Text className="report-label">变动人力成本</Text><Text className="report-value">{formatCurrency(plData.variableCosts)}</Text></View>
-                <View className="report-row indent"><Text className="report-label">私教佣金</Text><Text className="report-value">{formatCurrency(plData.ptCommission)}</Text></View>
-                <View className="report-row indent"><Text className="report-label">营销支出</Text><Text className="report-value">{formatCurrency(plData.marketingCost)}</Text></View>
-                <View className="report-row total"><Text className="report-label">总成本</Text><Text className="report-value">{formatCurrency(plData.totalCosts)}</Text></View>
+                <View className="report-sub">收入</View>
+                <View className="report-row"><Text className="report-label">团课收入</Text><Text className="report-value">{formatCurrency(plData.classRevenue)}</Text></View>
+                <View className="report-row"><Text className="report-label">私教收入</Text><Text className="report-value">{formatCurrency(plData.ptRevenue)}</Text></View>
+                <View className="report-row"><Text className="report-label">零售收入</Text><Text className="report-value">{formatCurrency(plData.otherRevenue)}</Text></View>
+                <View className="report-row total"><Text className="report-label">总收入</Text><Text className="report-value">{formatCurrency(plData.revenue)}</Text></View>
+                
+                <View className="report-sub">固定成本（日分摊）</View>
+                <View className="report-row"><Text className="report-label">房租</Text><Text className="report-value">{formatCurrency(plData.fixedCostsDetail.rent)}</Text></View>
+                <View className="report-row"><Text className="report-label">水电费</Text><Text className="report-value">{formatCurrency(plData.fixedCostsDetail.utilities)}</Text></View>
+                <View className="report-row"><Text className="report-label">固定人力</Text><Text className="report-value">{formatCurrency(plData.fixedCostsDetail.staff)}</Text></View>
+                <View className="report-row"><Text className="report-label">保险</Text><Text className="report-value">{formatCurrency(plData.fixedCostsDetail.insurance)}</Text></View>
+                <View className="report-row"><Text className="report-label">设备折旧</Text><Text className="report-value">{formatCurrency(plData.fixedCostsDetail.depreciation)}</Text></View>
+                <View className="report-row"><Text className="report-label">装修摊销</Text><Text className="report-value">{formatCurrency(plData.fixedCostsDetail.renovation)}</Text></View>
+                <View className="report-row total"><Text className="report-label">固定成本小计</Text><Text className="report-value">{formatCurrency(plData.fixedCosts)}</Text></View>
+                
+                <View className="report-sub">变动成本</View>
+                <View className="report-row"><Text className="report-label">变动人力成本 - 团课</Text><Text className="report-value">{formatCurrency(plData.classCoachCost)}</Text></View>
+                <View className="report-row"><Text className="report-label">变动人力成本 - 私教</Text><Text className="report-value">{formatCurrency(plData.ptCommission)}</Text></View>
+                <View className="report-row"><Text className="report-label">营销支出</Text><Text className="report-value">{formatCurrency(plData.marketingCost)}</Text></View>
+                <View className="report-row total"><Text className="report-label">变动成本小计</Text><Text className="report-value">{formatCurrency(plData.variableCosts + plData.marketingCost)}</Text></View>
+                
+                <View className="report-sub">利润</View>
                 <View className="report-row profit"><Text className="report-label">净利润</Text><Text className="report-value">{formatCurrency(plData.profit)}</Text></View>
                 <View className="report-row"><Text className="report-label">净利润率</Text><Text className="report-value">{plData.profitMargin.toFixed(1)}%</Text></View>
               </View>
             </View>
           )}
 
-          {activeReport === 'balance' && (
-            <View className="report-section">
-              <View className="report-header">
-                <Text className="report-title">资产负债表</Text>
-                <Text className="report-date">{new Date().toLocaleDateString()}</Text>
-              </View>
-              <View className="report-content">
-                <View className="report-sub"><Text>资产</Text></View>
-                <View className="report-row indent"><Text className="report-label">货币资金</Text><Text className="report-value">{formatCurrency(balanceData.cash)}</Text></View>
-                <View className="report-row total"><Text className="report-label">资产总计</Text><Text className="report-value">{formatCurrency(balanceData.totalAssets)}</Text></View>
-                <View className="report-sub"><Text>负债</Text></View>
-                <View className="report-row indent"><Text className="report-label">预收账款</Text><Text className="report-value">{formatCurrency(balanceData.unearnedRevenue)}</Text></View>
-                <View className="report-row total"><Text className="report-label">负债总计</Text><Text className="report-value">{formatCurrency(balanceData.totalLiabilities)}</Text></View>
-                <View className="report-sub"><Text>所有者权益</Text></View>
-                <View className="report-row indent"><Text className="report-label">所有者权益</Text><Text className="report-value">{formatCurrency(balanceData.ownerEquity)}</Text></View>
-                <View className="report-row total"><Text className="report-label">权益总计</Text><Text className="report-value">{formatCurrency(balanceData.ownerEquity)}</Text></View>
-                <View className={`report-row ${balanceData.isBalanced ? 'profit' : 'loss'}`}>
-                  <Text className="report-label">平衡检查</Text>
-                  <Text className="report-value">{balanceData.isBalanced ? '✅ 平衡' : '⚠️ 不平衡'}</Text>
-                </View>
-              </View>
-            </View>
-          )}
-
-          {activeReport === 'cashflow' && (
-            <View className="report-section">
-              <View className="report-header">
-                <Text className="report-title">现金流量表</Text>
-                <Text className="report-date">{new Date().toLocaleDateString()}</Text>
-              </View>
-              <View className="report-content">
-                <View className="report-sub"><Text>现金流入</Text></View>
-                <View className="report-row indent"><Text className="report-label">新会员现金流入</Text><Text className="report-value">{formatCurrency(cashFlowData.cashIn.newRevenue)}</Text></View>
-                <View className="report-row indent"><Text className="report-label">零售收入</Text><Text className="report-value">{formatCurrency(cashFlowData.cashIn.retailRevenue)}</Text></View>
-                <View className="report-row indent"><Text className="report-label">其他收入</Text><Text className="report-value">{formatCurrency(cashFlowData.cashIn.otherRevenue)}</Text></View>
-                <View className="report-row total"><Text className="report-label">现金流入小计</Text><Text className="report-value">{formatCurrency(cashFlowData.cashIn.total)}</Text></View>
-                <View className="report-sub"><Text>现金流出</Text></View>
-                <View className="report-row indent"><Text className="report-label">营销支出</Text><Text className="report-value">{formatCurrency(cashFlowData.cashOut.marketing)}</Text></View>
-                <View className="report-row indent"><Text className="report-label">变动人力成本</Text><Text className="report-value">{formatCurrency(cashFlowData.cashOut.variableStaff)}</Text></View>
-                <View className="report-row indent"><Text className="report-label">其他现金流出</Text><Text className="report-value">{formatCurrency(cashFlowData.cashOut.otherCashOut)}</Text></View>
-                <View className="report-row total"><Text className="report-label">现金流出小计</Text><Text className="report-value">{formatCurrency(cashFlowData.cashOut.total)}</Text></View>
-                <View className="report-row profit"><Text className="report-label">净现金流</Text><Text className="report-value">{formatCurrency(cashFlowData.netChange)}</Text></View>
-                <View className="report-sub"><Text>现金余额</Text></View>
-                <View className="report-row indent"><Text className="report-label">期初现金</Text><Text className="report-value">{formatCurrency(cashFlowData.beginningCash)}</Text></View>
-                <View className="report-row indent"><Text className="report-label">期末现金</Text><Text className="report-value">{formatCurrency(cashFlowData.endingCash)}</Text></View>
-              </View>
-            </View>
-          )}
-
+          {/* 盈亏平衡分析内容 */}
           {activeReport === 'breakeven' && (
             <View className="report-section">
               <View className="report-header">
@@ -405,24 +562,214 @@ export default function Dashboard() {
                 <Text className="report-date">{new Date().toLocaleDateString()}</Text>
               </View>
               <View className="report-content">
-                <View className="report-row"><Text className="report-label">日盈亏平衡点</Text><Text className="report-value">{formatCurrency(breakEvenData.dailyBreakEven)}</Text></View>
-                <View className="report-row"><Text className="report-label">月盈亏平衡点</Text><Text className="report-value">{formatCurrency(breakEvenData.monthlyBreakEven)}</Text></View>
-                <View className="report-row"><Text className="report-label">当前日均收入</Text><Text className="report-value">{formatCurrency(breakEvenData.currentDailyRevenue)}</Text></View>
+                <View className="report-row">
+                  <Text className="report-label">日盈亏平衡点</Text>
+                  <Text className="report-value">{formatCurrency(breakEvenData.dailyBreakEven)}</Text>
+                </View>
+                <View className="report-row">
+                  <Text className="report-label">月盈亏平衡点</Text>
+                  <Text className="report-value">{formatCurrency(breakEvenData.monthlyBreakEven)}</Text>
+                </View>
+                <View className="report-row">
+                  <Text className="report-label">今日主营业务收入</Text>
+                  <Text className="report-value">{formatCurrency(breakEvenData.currentDailyRevenue)}</Text>
+                </View>
+                
+                {/* 进度条 */}
                 <View className="progress-bar">
                   <View className="progress-track">
                     <View className="progress-fill" style={{ width: `${breakEvenData.dailyProgress}%` }} />
                   </View>
                 </View>
+                
                 <View className={`report-row ${breakEvenData.isAchieved ? 'profit' : 'loss'}`}>
                   <Text className="report-label">当前状态</Text>
                   <Text className="report-value">{breakEvenData.isAchieved ? '✅ 已超过盈亏平衡点' : '⚠️ 未达到盈亏平衡点'}</Text>
+                </View>
+                
+                {/* 备注说明 */}
+                <View className="break-even-note">
+                  <Text className="note-title">📌 计算说明</Text>
+                  <View className="note-item">① 每月按30天折算日固定成本</View>
+                  <View className="note-item">② 边际贡献利润率按最近7天平均计算</View>
+                  <View className="note-item">③ 仅考虑主营业务（团课+私教），不含零售等一次性收入</View>
+                </View>
+              </View>
+            </View>
+          )}
+
+          {/* 现金流量表内容 */}
+          {activeReport === 'cashflow' && (
+            <View className="report-section">
+              <View className="report-header">
+                <Text className="report-title">现金流量表</Text>
+                <Text className="report-date">{new Date().toLocaleDateString()}</Text>
+              </View>
+              <View className="report-content">
+                <View className="report-sub">现金流入</View>
+                <View className="report-row"><Text className="report-label">新会员现金流入</Text><Text className="report-value">{formatCurrency(cashFlowData.cashIn.newRevenue)}</Text></View>
+                <View className="report-row"><Text className="report-label">零售收入</Text><Text className="report-value">{formatCurrency(cashFlowData.cashIn.retailRevenue)}</Text></View>
+                <View className="report-row"><Text className="report-label">其他收入</Text><Text className="report-value">{formatCurrency(cashFlowData.cashIn.otherRevenue)}</Text></View>
+                <View className="report-row total"><Text className="report-label">现金流入小计</Text><Text className="report-value">{formatCurrency(cashFlowData.cashIn.total)}</Text></View>
+                
+                <View className="report-sub">现金流出</View>
+                <View className="report-row"><Text className="report-label">营销支出</Text><Text className="report-value">{formatCurrency(cashFlowData.cashOut.marketing)}</Text></View>
+                <View className="report-row"><Text className="report-label">其他现金流出</Text><Text className="report-value">{formatCurrency(cashFlowData.cashOut.otherCashOut)}</Text></View>
+                <View className="report-row total"><Text className="report-label">现金流出小计</Text><Text className="report-value">{formatCurrency(cashFlowData.cashOut.total)}</Text></View>
+                
+                <View className="report-sub">净现金流</View>
+                <View className="report-row profit"><Text className="report-label">净现金流</Text><Text className="report-value">{formatCurrency(cashFlowData.netChange)}</Text></View>
+                
+                <View className="report-sub">现金余额</View>
+                <View className="report-row"><Text className="report-label">期初现金</Text><Text className="report-value">{formatCurrency(cashFlowData.beginningCash)}</Text></View>
+                <View className="report-row"><Text className="report-label">期末现金</Text><Text className="report-value">{formatCurrency(cashFlowData.endingCash)}</Text></View>
+              </View>
+            </View>
+          )}
+
+          {/* 预收与可用现金余额内容 */}
+          {activeReport === 'cashflowAnalysis' && (
+            <View className="report-section">
+              <View className="report-header">
+                <Text className="report-title">预收与可用现金余额</Text>
+                <Text className="report-date">{new Date().toLocaleDateString()}</Text>
+              </View>
+              <View className="cashflow-analysis-content">
+                <View className="analysis-card">
+                  <Text className="analysis-label">可用现金流</Text>
+                  <Text className="analysis-value">{formatCurrency(metrics.availableCash)}</Text>
+                  <Text className="analysis-status">
+                    {metrics.availableCash <= 0 ? '⚠️ 资金链风险' : 
+                     metrics.cashBalance > 0 && metrics.unearnedRevenue / metrics.cashBalance > 0.7 ? '⚠️ 预收占比较高' : '✅ 财务状况健康'}
+                  </Text>
+                </View>
+                
+                <View className="analysis-row">
+                  <Text className="analysis-label">期末现金余额</Text>
+                  <Text className="analysis-value">{formatCurrency(metrics.cashBalance)}</Text>
+                </View>
+                <View className="analysis-row">
+                  <Text className="analysis-label">预收账款</Text>
+                  <Text className="analysis-value">{formatCurrency(metrics.unearnedRevenue)}</Text>
+                </View>
+                <View className="analysis-divider" />
+                <View className="analysis-row total">
+                  <Text className="analysis-label">可用现金</Text>
+                  <Text className="analysis-value">{formatCurrency(metrics.availableCash)}</Text>
+                </View>
+                
+                <View className="analysis-note">
+                  <Text>💡 可用现金 = 现金余额 - 预收账款</Text>
+                  <Text>预收账款占比: {metrics.cashBalance > 0 ? ((metrics.unearnedRevenue / metrics.cashBalance) * 100).toFixed(1) : 0}%</Text>
+                </View>
+              </View>
+            </View>
+          )}
+
+          {/* 客户价值分析内容 */}
+          {activeReport === 'customer' && (
+            <View className="report-section">
+              <View className="report-header">
+                <Text className="report-title">客户价值分析</Text>
+                <Text className="report-date">{new Date().toLocaleDateString()}</Text>
+              </View>
+              <View className="report-content">
+                {/* CAC 卡片 */}
+                <View className="customer-card">
+                  <View className="customer-icon">📢</View>
+                  <View className="customer-info">
+                    <Text className="customer-label">CAC 获客成本</Text>
+                    <Text className="customer-value">{formatCurrency(customerMetrics.cac)}</Text>
+                    <Text className="customer-unit">/人</Text>
+                  </View>
+                  <View className="customer-trend">
+                    <Text className="trend-desc">每获得一个新会员的平均花费</Text>
+                  </View>
+                </View>
+                
+                {/* LTV 卡片 */}
+                <View className="customer-card">
+                  <View className="customer-icon">💎</View>
+                  <View className="customer-info">
+                    <Text className="customer-label">LTV 客户生命周期价值</Text>
+                    <Text className="customer-value">{formatCurrency(customerMetrics.ltv)}</Text>
+                    <Text className="customer-unit">/人</Text>
+                  </View>
+                  <View className="customer-trend">
+                    <Text className="trend-desc">一个客户在整个留存周期内贡献的总收入</Text>
+                  </View>
+                </View>
+                
+                {/* LTV/CAC 比值卡片 */}
+                <View className="customer-card highlight">
+                  <View className="customer-icon">📊</View>
+                  <View className="customer-info">
+                    <Text className="customer-label">LTV / CAC</Text>
+                    <Text className="customer-value" style={{ color: customerMetrics.statusColor }}>
+                      {customerMetrics.ratio.toFixed(2)}
+                    </Text>
+                    <Text className="customer-unit">倍</Text>
+                  </View>
+                  <View className="customer-status" style={{ backgroundColor: customerMetrics.statusColor + '20' }}>
+                    <Text className="status-text" style={{ color: customerMetrics.statusColor }}>
+                      {customerMetrics.status}
+                    </Text>
+                  </View>
+                </View>
+                
+                {/* 指标解读 */}
+                <View className="customer-interpretation">
+                  <Text className="interpretation-title">📖 指标解读</Text>
+                  <View className="interpretation-item">
+                    <Text className="interpretation-label">健康标准：</Text>
+                    <Text className="interpretation-text">LTV/CAC ≥ 3 为优秀，2-3 为良好，1-2 需注意，&lt;1 为危险</Text>
+                  </View>
+                  <View className="interpretation-item">
+                    <Text className="interpretation-label">当前状态：</Text>
+                    <Text className="interpretation-text">{customerMetrics.statusDesc}</Text>
+                  </View>
+                </View>
+                
+                {/* 计算说明 */}
+                <View className="customer-note">
+                  <Text className="note-title">📌 计算说明</Text>
+                  <View className="note-item">① CAC = 总营销支出 ÷ 新增会员数</View>
+                  <View className="note-item">② LTV = 月均会员消费 × 平均留存月数（默认6个月）</View>
+                  <View className="note-item">③ 月均会员消费基于近30天会员消耗数据计算</View>
+                  <View className="note-item">④ 建议 LTV/CAC 保持在 3 倍以上，确保健康增长</View>
+                </View>
+                
+                {/* 优化建议 */}
+                <View className="customer-suggestion">
+                  <Text className="suggestion-title">💡 优化建议</Text>
+                  {customerMetrics.ratio > 0 && customerMetrics.ratio < 2 && (
+                    <>
+                      <View className="suggestion-item">• 降低获客成本：优化投放渠道、增加转介绍活动</View>
+                      <View className="suggestion-item">• 提高客户价值：提升续费率、推广私教加购</View>
+                      <View className="suggestion-item">• 延长留存周期：加强会员服务、增加社群互动</View>
+                    </>
+                  )}
+                  {customerMetrics.ratio >= 2 && customerMetrics.ratio < 3 && (
+                    <>
+                      <View className="suggestion-item">• 当前表现良好，可适当加大获客投入</View>
+                      <View className="suggestion-item">• 关注客户留存，进一步提升 LTV</View>
+                    </>
+                  )}
+                  {customerMetrics.ratio >= 3 && (
+                    <>
+                      <View className="suggestion-item">• 商业模式优秀，可考虑扩张</View>
+                      <View className="suggestion-item">• 保持现有策略，持续优化</View>
+                    </>
+                  )}
+                  {customerMetrics.cac === 0 && (
+                    <View className="suggestion-item">• 暂无足够数据，请先在「快捷录入」中记录营销支出和新会员数</View>
+                  )}
                 </View>
               </View>
             </View>
           )}
         </>
       ) : (
-        /* 无数据时显示空状态 */
         <View className="empty-state">
           <View className="empty-icon">📊</View>
           <Text className="empty-title">暂无数据</Text>

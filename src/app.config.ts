@@ -5,9 +5,9 @@ export default defineAppConfig({
     'pages/profile/index',
     'pages/settings/index',
     'pages/pl/index',
-    'pages/balance/index',
     'pages/cashflow/index',
-    'pages/breakeven/index'
+    'pages/breakeven/index',
+    'pages/cashflowAnalysis/index'
   ],
   window: {
     backgroundTextStyle: 'light',
