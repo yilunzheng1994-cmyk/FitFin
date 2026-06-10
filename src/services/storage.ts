@@ -10,13 +10,12 @@ export interface DailyEntry {
   otherCashOut?: number;
   // 团课类
   classCount?: number;
-  classHours?: number;           // 团课总课时（用于计算团课教练费）
+  classHours?: number;
   avgClassSize?: number;
   avgRevenuePerMember?: number;
   // 会员类
   newMembers?: number;
   newRevenue?: number;
-  memberCount?: number;
   // 私教类
   ptHours?: number;
   ptRate?: number;

@@ -7,7 +7,9 @@ export default defineAppConfig({
     'pages/pl/index',
     'pages/cashflow/index',
     'pages/breakeven/index',
-    'pages/cashflowAnalysis/index'
+    'pages/cashflowAnalysis/index',
+    'pages/privacy/index',
+    'pages/about/index'  // 新增
   ],
   window: {
     backgroundTextStyle: 'light',

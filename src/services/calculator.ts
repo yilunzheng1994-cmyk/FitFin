@@ -290,7 +290,8 @@ export const calculateBreakEven = () => {
     isAchieved: currentDailyRevenue >= dailyBreakEven
   }
 }
-// 在 calculator.ts 末尾添加以下函数
+
+// ========== CAC 获客成本分析 ==========
 
 // 计算 CAC（获客成本）
 export const calculateCAC = (): number => {
@@ -310,97 +311,41 @@ export const calculateCAC = (): number => {
   return totalMarketingSpend / totalNewMembers
 }
 
-// 计算 LTV（客户生命周期价值）
-export const calculateLTV = (): number => {
-  const settings = getBusinessSettings()
-  const entries = getDailyEntries()
-  const dates = Object.keys(entries).sort()
-  
-  if (dates.length === 0) return 0
-  
-  // 取最近30天数据计算平均月消费
-  const recentDates = dates.slice(-30)
-  let totalMemberRevenue = 0
-  let totalMemberDays = 0
-  
-  for (const date of recentDates) {
-    const entry = entries[date]
-    // 会员消耗收入 = 团课消耗 + 私教消耗
-    const classConsumed = (entry.classCount || 0) * (entry.avgClassSize || 8) * (entry.avgRevenuePerMember || 15)
-    const ptConsumed = (entry.ptHours || 0) * (entry.ptRate || settings.defaultPtRate)
-    const renewRevenue = entry.newRevenue || 0  // 续费收入
-    
-    totalMemberRevenue += classConsumed + ptConsumed + renewRevenue
-    
-    // 统计有会员数据的活跃天数
-    if (entry.memberCount && entry.memberCount > 0) {
-      totalMemberDays += 1
-    }
-  }
-  
-  // 如果没有会员数据，使用行业默认值
-  if (totalMemberDays === 0) {
-    // 默认月消费 800 元，平均留存 6 个月
-    return 800 * 6
-  }
-  
-  // 计算日均会员收入，转为月收入（×30）
-  const dailyAvgRevenue = totalMemberRevenue / recentDates.length
-  const avgMonthlySpend = dailyAvgRevenue * 30
-  
-  // 平均客户留存月数（行业默认6个月，未来可基于续费率动态计算）
-  const avgRetentionMonths = 6
-  
-  const ltv = avgMonthlySpend * avgRetentionMonths
-  
-  // 防止极端值
-  return Math.min(20000, Math.max(500, ltv))
-}
-
-// 计算 LTV/CAC 比值
-export const calculateLTVtoCAC = (): number => {
+// 获取 CAC 指标（带状态解读）
+export const getCACMetrics = () => {
   const cac = calculateCAC()
-  const ltv = calculateLTV()
-  
-  if (cac === 0) return 0
-  return ltv / cac
-}
-
-// 获取客户健康度指标（带状态解读）
-export const getCustomerHealthMetrics = () => {
-  const cac = calculateCAC()
-  const ltv = calculateLTV()
-  const ratio = ltv / cac
   
   let status = ''
   let statusColor = ''
   let statusDesc = ''
   
-  if (ratio >= 3) {
-    status = '非常健康'
+  if (cac === 0) {
+    status = '暂无数据'
+    statusColor = '#9ca3af'
+    statusDesc = '请先在快捷录入中记录营销支出和新会员数'
+  } else if (cac < 100) {
+    status = '优秀'
     statusColor = '#10b981'
-    statusDesc = '每投入1元获客成本，可收回3元以上价值，商业模式优秀'
-  } else if (ratio >= 2) {
-    status = '健康'
+    statusDesc = '获客成本控制得很好，建议保持现有策略'
+  } else if (cac < 300) {
+    status = '良好'
     statusColor = '#34d399'
-    statusDesc = '获客效率良好，建议优化留存进一步提升'
-  } else if (ratio >= 1) {
-    status = '需要注意'
+    statusDesc = '获客成本在合理范围内，可尝试优化渠道进一步提升'
+  } else if (cac < 600) {
+    status = '偏高'
     statusColor = '#f59e0b'
-    statusDesc = '获客成本偏高或客户价值偏低，需优化营销策略'
+    statusDesc = '获客成本偏高，建议优化投放渠道或增加转介绍活动'
   } else {
     status = '危险'
     statusColor = '#ef4444'
-    statusDesc = '每卖一单亏一单，请立即优化获客渠道或提升客单价'
+    statusDesc = '获客成本过高，请立即优化营销策略'
   }
   
   return {
     cac,
-    ltv,
-    ratio,
     status,
     statusColor,
     statusDesc,
-    hasData: cac > 0 && ltv > 0
+    hasData: cac > 0
   }
 }

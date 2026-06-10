@@ -1144,3 +1144,73 @@
     color: #e67e22;
   }
 }
+// LTV 禁用卡片样式
+.customer-card.ltv-disabled {
+  background-color: #f9fafb;
+  border: 1px dashed #d1d5db;
+  
+  .customer-value {
+    color: #9ca3af !important;
+    font-size: 36px;
+  }
+  
+  .trend-desc {
+    color: #9ca3af;
+  }
+}
+// 计算说明中的 note-item 样式
+.customer-note {
+  margin-top: 20px;
+  padding: 16px;
+  background-color: #f5f7fa;
+  border-radius: 12px;
+  
+  .note-title {
+    font-size: 24px;
+    font-weight: 500;
+    color: #666;
+    margin-bottom: 12px;
+    display: block;
+  }
+  
+  .note-item {
+    font-size: 22px;
+    color: #888;
+    line-height: 1.6;
+    margin-bottom: 8px;
+    display: block;
+    
+    &:last-child {
+      margin-bottom: 0;
+    }
+  }
+}
+
+// 优化建议样式
+.customer-suggestion {
+  margin-top: 20px;
+  padding: 20px;
+  background-color: #fffbeb;
+  border-radius: 16px;
+  border-left: 4px solid #f59e0b;
+  
+  .suggestion-title {
+    font-size: 26px;
+    font-weight: 600;
+    color: #92400e;
+    display: block;
+    margin-bottom: 16px;
+  }
+  
+  .suggestion-item {
+    font-size: 24px;
+    color: #b45309;
+    line-height: 1.8;
+    margin-bottom: 8px;
+    display: block;
+    
+    &:last-child {
+      margin-bottom: 0;
+    }
+  }
+}

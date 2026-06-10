@@ -54,12 +54,12 @@ export default function Profile() {
 
   const handlePrivacy = () => {
     vibrate('light')
-    Taro.showToast({ title: '隐私说明（开发中）', icon: 'none' })
+    Taro.navigateTo({ url: '/pages/privacy/index' })
   }
 
   const handleAbout = () => {
     vibrate('light')
-    Taro.showToast({ title: '关于我们（开发中）', icon: 'none' })
+    Taro.navigateTo({ url: '/pages/about/index' })
   }
 
   const handleSettings = () => {
@@ -105,7 +105,7 @@ export default function Profile() {
           <Text>📤 数据导出</Text>
         </View>
         <View className="menu-item" onClick={handlePrivacy}>
-          <Text>隐私说明</Text>
+          <Text>📄 隐私说明</Text>
         </View>
         <View className="menu-item" onClick={handleAbout}>
           <Text>ℹ️ 关于我们</Text>

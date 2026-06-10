@@ -1,7 +1,7 @@
 import { View, Text, Image } from '@tarojs/components'
 import { useState, useEffect } from 'react'
 import Taro from '@tarojs/taro'
-import { getLatestMetrics, getCumulativeMetrics, getWeeklyTrend, calculateBreakEven, getCustomerHealthMetrics } from '../../services/calculator'
+import { getLatestMetrics, getCumulativeMetrics, getWeeklyTrend, calculateBreakEven, getCACMetrics } from '../../services/calculator'
 import { getDailyEntries, getBusinessSettings, hasAnyData, initTestData, clearAllData } from '../../services/storage'
 import { formatCurrency } from '../../utils/format'
 import emitter from '../../utils/eventBus'
@@ -73,8 +73,6 @@ export default function Dashboard() {
   
   const [customerMetrics, setCustomerMetrics] = useState({
     cac: 0,
-    ltv: 0,
-    ratio: 0,
     status: '',
     statusColor: '',
     statusDesc: '',
@@ -306,7 +304,7 @@ export default function Dashboard() {
   }
   
   const loadCustomerMetrics = () => {
-    const metrics = getCustomerHealthMetrics()
+    const metrics = getCACMetrics()
     setCustomerMetrics(metrics)
   }
 
@@ -666,108 +664,87 @@ export default function Dashboard() {
             </View>
           )}
 
-          {/* 客户价值分析内容 */}
-          {activeReport === 'customer' && (
-            <View className="report-section">
-              <View className="report-header">
-                <Text className="report-title">客户价值分析</Text>
-                <Text className="report-date">{new Date().toLocaleDateString()}</Text>
-              </View>
-              <View className="report-content">
-                {/* CAC 卡片 */}
-                <View className="customer-card">
-                  <View className="customer-icon">📢</View>
-                  <View className="customer-info">
-                    <Text className="customer-label">CAC 获客成本</Text>
-                    <Text className="customer-value">{formatCurrency(customerMetrics.cac)}</Text>
-                    <Text className="customer-unit">/人</Text>
-                  </View>
-                  <View className="customer-trend">
-                    <Text className="trend-desc">每获得一个新会员的平均花费</Text>
-                  </View>
-                </View>
-                
-                {/* LTV 卡片 */}
-                <View className="customer-card">
-                  <View className="customer-icon">💎</View>
-                  <View className="customer-info">
-                    <Text className="customer-label">LTV 客户生命周期价值</Text>
-                    <Text className="customer-value">{formatCurrency(customerMetrics.ltv)}</Text>
-                    <Text className="customer-unit">/人</Text>
-                  </View>
-                  <View className="customer-trend">
-                    <Text className="trend-desc">一个客户在整个留存周期内贡献的总收入</Text>
-                  </View>
-                </View>
-                
-                {/* LTV/CAC 比值卡片 */}
-                <View className="customer-card highlight">
-                  <View className="customer-icon">📊</View>
-                  <View className="customer-info">
-                    <Text className="customer-label">LTV / CAC</Text>
-                    <Text className="customer-value" style={{ color: customerMetrics.statusColor }}>
-                      {customerMetrics.ratio.toFixed(2)}
-                    </Text>
-                    <Text className="customer-unit">倍</Text>
-                  </View>
-                  <View className="customer-status" style={{ backgroundColor: customerMetrics.statusColor + '20' }}>
-                    <Text className="status-text" style={{ color: customerMetrics.statusColor }}>
-                      {customerMetrics.status}
-                    </Text>
-                  </View>
-                </View>
-                
-                {/* 指标解读 */}
-                <View className="customer-interpretation">
-                  <Text className="interpretation-title">📖 指标解读</Text>
-                  <View className="interpretation-item">
-                    <Text className="interpretation-label">健康标准：</Text>
-                    <Text className="interpretation-text">LTV/CAC ≥ 3 为优秀，2-3 为良好，1-2 需注意，&lt;1 为危险</Text>
-                  </View>
-                  <View className="interpretation-item">
-                    <Text className="interpretation-label">当前状态：</Text>
-                    <Text className="interpretation-text">{customerMetrics.statusDesc}</Text>
-                  </View>
-                </View>
-                
-                {/* 计算说明 */}
-                <View className="customer-note">
-                  <Text className="note-title">📌 计算说明</Text>
-                  <View className="note-item">① CAC = 总营销支出 ÷ 新增会员数</View>
-                  <View className="note-item">② LTV = 月均会员消费 × 平均留存月数（默认6个月）</View>
-                  <View className="note-item">③ 月均会员消费基于近30天会员消耗数据计算</View>
-                  <View className="note-item">④ 建议 LTV/CAC 保持在 3 倍以上，确保健康增长</View>
-                </View>
-                
-                {/* 优化建议 */}
-                <View className="customer-suggestion">
-                  <Text className="suggestion-title">💡 优化建议</Text>
-                  {customerMetrics.ratio > 0 && customerMetrics.ratio < 2 && (
-                    <>
-                      <View className="suggestion-item">• 降低获客成本：优化投放渠道、增加转介绍活动</View>
-                      <View className="suggestion-item">• 提高客户价值：提升续费率、推广私教加购</View>
-                      <View className="suggestion-item">• 延长留存周期：加强会员服务、增加社群互动</View>
-                    </>
-                  )}
-                  {customerMetrics.ratio >= 2 && customerMetrics.ratio < 3 && (
-                    <>
-                      <View className="suggestion-item">• 当前表现良好，可适当加大获客投入</View>
-                      <View className="suggestion-item">• 关注客户留存，进一步提升 LTV</View>
-                    </>
-                  )}
-                  {customerMetrics.ratio >= 3 && (
-                    <>
-                      <View className="suggestion-item">• 商业模式优秀，可考虑扩张</View>
-                      <View className="suggestion-item">• 保持现有策略，持续优化</View>
-                    </>
-                  )}
-                  {customerMetrics.cac === 0 && (
-                    <View className="suggestion-item">• 暂无足够数据，请先在「快捷录入」中记录营销支出和新会员数</View>
-                  )}
-                </View>
-              </View>
-            </View>
-          )}
+         {/* 客户价值分析内容 */}
+{activeReport === 'customer' && (
+  <View className="report-section">
+    <View className="report-header">
+      <Text className="report-title">客户价值分析</Text>
+      <Text className="report-date">{new Date().toLocaleDateString()}</Text>
+    </View>
+    <View className="report-content">
+      {/* CAC 卡片 */}
+      <View className="customer-card">
+        <View className="customer-icon">📢</View>
+        <View className="customer-info">
+          <Text className="customer-label">CAC 获客成本</Text>
+          <Text className="customer-value">{formatCurrency(customerMetrics.cac)}</Text>
+          <Text className="customer-unit">/人</Text>
+        </View>
+        <View className="customer-status" style={{ backgroundColor: customerMetrics.statusColor + '20' }}>
+          <Text className="status-text" style={{ color: customerMetrics.statusColor }}>
+            {customerMetrics.status}
+          </Text>
+        </View>
+      </View>
+      
+      {/* LTV 提示卡片 */}
+      <View className="customer-card ltv-disabled">
+        <View className="customer-icon">⏳</View>
+        <View className="customer-info">
+          <Text className="customer-label">LTV 客户生命周期价值</Text>
+          <Text className="customer-value">即将上线</Text>
+          <Text className="customer-unit">/人</Text>
+        </View>
+        <View className="customer-trend">
+          <Text className="trend-desc">接入会员系统后可精确计算</Text>
+        </View>
+      </View>
+      
+      {/* LTV/CAC 提示卡片 */}
+      <View className="customer-card ltv-disabled">
+        <View className="customer-icon">📊</View>
+        <View className="customer-info">
+          <Text className="customer-label">LTV / CAC</Text>
+          <Text className="customer-value">—</Text>
+          <Text className="customer-unit">倍</Text>
+        </View>
+        <View className="customer-trend">
+          <Text className="trend-desc">需要 LTV 数据后计算</Text>
+        </View>
+      </View>
+      
+      {/* 指标解读 */}
+      <View className="customer-interpretation">
+        <Text className="interpretation-title">📖 CAC 解读</Text>
+        <View className="interpretation-item">
+          <Text className="interpretation-label">当前状态：</Text>
+          <Text className="interpretation-text">{customerMetrics.statusDesc}</Text>
+        </View>
+        <View className="interpretation-item">
+          <Text className="interpretation-label">行业参考：</Text>
+          <Text className="interpretation-text">健身工作室 CAC 通常在 100-500 元之间</Text>
+        </View>
+      </View>
+      
+      {/* 计算说明 */}
+      <View className="customer-note">
+        <Text className="note-title">📌 计算说明</Text>
+        <Text className="note-item">① CAC = 总营销支出 ÷ 新增会员数</Text>
+        <Text className="note-item">② 营销支出包括广告、地推、转介绍奖励等</Text>
+        <Text className="note-item">③ 建议定期评估不同渠道的获客成本</Text>
+      </View>
+      
+      {/* 优化建议 */}
+      <View className="customer-suggestion">
+        <Text className="suggestion-title">💡 降低 CAC 的方法</Text>
+        <Text className="suggestion-item">• 优化投放渠道，关停低 ROI 渠道</Text>
+        <Text className="suggestion-item">• 增加会员转介绍活动（如赠课、返现）</Text>
+        <Text className="suggestion-item">• 提升到店转化率（优化体验课流程）</Text>
+        <Text className="suggestion-item">• 与周边商家合作，降低获客成本</Text>
+      </View>
+    </View>
+  </View>
+)}
         </>
       ) : (
         <View className="empty-state">
