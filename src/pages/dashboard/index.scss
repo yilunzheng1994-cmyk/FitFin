@@ -1214,3 +1214,16 @@
     }
   }
 }
+// 免责声明
+.dashboard-disclaimer {
+  padding: 24px 32px 140px 32px;
+  background-color: transparent;
+  text-align: center;
+
+  .disclaimer-text {
+    font-size: 22px;
+    color: #999;
+    line-height: 1.5;
+    display: block;
+  }
+}

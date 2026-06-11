@@ -9,12 +9,15 @@ export default defineAppConfig({
     'pages/breakeven/index',
     'pages/cashflowAnalysis/index',
     'pages/privacy/index',
-    'pages/about/index'  // 新增
+    'pages/about/index',
+    'pages/terms/index'
   ],
   window: {
     backgroundTextStyle: 'light',
     navigationBarBackgroundColor: '#fff',
     navigationBarTitleText: 'FitFin 健身财务助手',
     navigationBarTextStyle: 'black'
-  }
+  },
+  lazyCodeLoading: 'requiredComponents',
+  style: 'v2'
 })

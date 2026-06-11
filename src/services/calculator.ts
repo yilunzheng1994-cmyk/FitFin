@@ -99,20 +99,42 @@ export const getLatestMetrics = () => {
   // 计算期末现金（用户录入后的结果）
   const endingCash = calculateEndingCash(latestEntry)
   
+  // ========== 加权置信度计算 ==========
   const allFields = [
     'cashBalanceStart', 'classCount', 'avgClassSize', 'avgRevenuePerMember',
     'ptHours', 'ptRate', 'retailRevenue', 'marketingSpend'
   ]
   
-  let filledCount = 0
+  // 字段权重配置（总分100）
+  const fieldWeights: Record<string, number> = {
+    cashBalanceStart: 15,    // 期初现金 - 重要，影响现金流计算
+    classCount: 15,          // 团课节数 - 重要，影响收入和成本
+    avgClassSize: 10,        // 平均人数 - 中等，影响团课收入估算
+    avgRevenuePerMember: 10, // 人均收入 - 中等，影响团课收入估算
+    ptHours: 15,             // 私教课时 - 重要，影响私教收入和佣金
+    ptRate: 10,              // 私教单价 - 中等，影响私教收入估算
+    retailRevenue: 10,       // 零售收入 - 一般，影响其他收入
+    marketingSpend: 15       // 营销支出 - 重要，影响CAC计算
+  }
+  
+  let totalWeight = 0
+  let filledWeight = 0
+  
   allFields.forEach(field => {
+    const weight = fieldWeights[field] || 10
+    totalWeight += weight
+    
     const value = latestEntry[field as keyof DailyEntry]
-    if (value !== undefined && value !== 0) {
-      filledCount++
+    // 值存在、不为 null、且不为 0 才算已填写
+    if (value !== undefined && value !== null && value !== 0) {
+      filledWeight += weight
     }
   })
   
-  const confidence = Math.min(100, Math.floor((filledCount / allFields.length) * 100))
+  // 置信度 = 已填权重 ÷ 总权重 × 100，最高95%（因为不可能100%完美）
+  const confidence = totalWeight > 0 
+    ? Math.min(95, Math.floor((filledWeight / totalWeight) * 100))
+    : 0
   
   return {
     date: latestEntry.date,

@@ -1,0 +1,129 @@
+.terms-page {
+    min-height: 100vh;
+    background-color: #f5f5f5;
+    padding-bottom: 120px;
+  }
+  
+  // 顶部导航栏
+  .terms-nav {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 24px 32px;
+    background-color: #fff;
+    border-bottom: 1px solid #f0f0f0;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+  
+    .back-btn {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 0;
+  
+      .back-icon {
+        font-size: 32px;
+        color: #10b981;
+      }
+  
+      .back-text {
+        font-size: 28px;
+        color: #10b981;
+      }
+    }
+  
+    .nav-title {
+      font-size: 32px;
+      font-weight: 600;
+      color: #333;
+    }
+  
+    .nav-placeholder {
+      width: 80px;
+    }
+  }
+  
+  // 内容区域
+  .terms-content {
+    padding: 24px 32px;
+  }
+  
+  // 头部
+  .terms-header {
+    text-align: center;
+    margin-bottom: 32px;
+  
+    .terms-title {
+      font-size: 36px;
+      font-weight: 600;
+      color: #333;
+      display: block;
+      margin-bottom: 16px;
+    }
+  
+    .terms-date {
+      font-size: 24px;
+      color: #999;
+      display: block;
+    }
+  }
+  
+  // 章节
+  .terms-section {
+    background-color: #fff;
+    border-radius: 20px;
+    padding: 24px;
+    margin-bottom: 20px;
+  
+    .section-title {
+      font-size: 30px;
+      font-weight: 600;
+      color: #333;
+      display: block;
+      margin-bottom: 16px;
+      padding-bottom: 12px;
+      border-bottom: 2px solid #f0f0f0;
+    }
+  
+    .section-text {
+      font-size: 26px;
+      color: #666;
+      line-height: 1.6;
+      display: block;
+      margin-bottom: 12px;
+    }
+  }
+  
+  // 免责声明
+  .terms-disclaimer {
+    margin: 20px 0;
+    padding: 20px;
+    background-color: transparent;
+  
+    .disclaimer-text {
+      font-size: 24px;
+      color: #999;
+      line-height: 1.5;
+      display: block;
+    }
+  }
+  
+  // 底部
+  .terms-footer {
+    text-align: center;
+    padding: 32px 0 60px;
+  
+    .footer-text {
+      font-size: 24px;
+      color: #999;
+      display: block;
+      margin-bottom: 12px;
+    }
+  
+    .footer-copyright {
+      font-size: 22px;
+      color: #bbb;
+      display: block;
+    }
+  }

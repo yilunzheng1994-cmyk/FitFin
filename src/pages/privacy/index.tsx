@@ -129,7 +129,7 @@ export default function Privacy() {
           <Text className="section-text">
             如您对本隐私政策有任何疑问或建议，可通过以下方式联系我们：
           </Text>
-          <Text className="section-text bullet">• 邮箱：Elaine.zyl@hotmail.com</Text>
+          <Text className="section-text bullet">• 💬 微信号 FitFin 📮 FitFin.official@outlook.com</Text>
           <Text className="section-text bullet">• 小程序内「意见反馈」功能（即将上线）</Text>
         </View>
 

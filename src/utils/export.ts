@@ -37,17 +37,24 @@ export const exportToCSV = (data: any[], filename: string = 'export') => {
     data: csvContent,
     encoding: 'utf8',
     success: () => {
-      Taro.shareFile({
-        filePath,
+      // 使用 openDocument 代替 shareFile
+      Taro.openDocument({
+        filePath: filePath,
         success: () => {
           Taro.showToast({ title: '导出成功', icon: 'success' })
         },
         fail: () => {
-          Taro.showToast({ title: '分享失败', icon: 'none' })
+          // 如果 openDocument 失败，提示文件位置
+          Taro.showModal({
+            title: '导出成功',
+            content: `文件已保存到临时目录，路径：${filePath}`,
+            showCancel: false
+          })
         }
       })
     },
-    fail: () => {
+    fail: (err) => {
+      console.error('写入失败:', err)
       Taro.showToast({ title: '导出失败', icon: 'none' })
     }
   })
@@ -63,6 +70,11 @@ export const exportDailyEntries = () => {
   
   const parsed = typeof entries === 'string' ? JSON.parse(entries) : entries
   const dataList = Object.values(parsed)
+  
+  if (dataList.length === 0) {
+    Taro.showToast({ title: '暂无数据', icon: 'none' })
+    return
+  }
   
   exportToCSV(dataList, `finance_data_${new Date().toISOString().slice(0, 10)}`)
 }
